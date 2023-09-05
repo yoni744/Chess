@@ -41,6 +41,8 @@ white_images = [white_pawn, white_queen, white_king, white_knight, white_rook, w
 black_images = [black_pawn, black_queen, black_king, black_knight, black_rook, black_bishop]    
 piece_list = ['pawn', 'queen', 'king', 'knight', 'rook', 'bishop']
 
+
+
 # 0 - whites turn no selection: 1-whites turn piece selected: 2- black turn no selection, 3 - black turn piece selected
 turn_step = 0
 selection = 100
@@ -139,13 +141,11 @@ def DrawPieces():
 def CheckClick():
     left = pg.mouse.get_pressed()
     pg.mouse.get_rel()
+    global redSquare, colour, x, y
     pos = 0
     x = 0
     y = 0
-    global redSquare
-    global colour
     if left[0]:
-        print(redSquare)
         if redSquare == -1:
             pos = pg.mouse.get_pos()
             x = pos[0] // 60
@@ -153,17 +153,31 @@ def CheckClick():
             colour = (255, 0, 0)
             pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
             redSquare = x, y
+            #print(redSquare)
             DrawPieces()
         
-        else:
-            DrawBoard()
-            redSquare = -1
+        if redSquare != -1:
+            print(redSquare)
             pos = pg.mouse.get_pos()
             x = pos[0] // 60
             y = pos[1] // 60
-            #pg.draw.rect(screen, next(colors), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
-            pg.draw.rect(screen, (255, 0, 0), pg.Rect(x * 60, y * 60, 60, 60))
+            pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
             DrawPieces()
+            
+            if (redSquare[0] + redSquare[1]) % 2 == 0:
+                print("== 0")
+                #DrawBoard()
+                pg.draw.rect(screen, (255, 255, 255), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
+                
+            #if (redSquare[0] + redSquare[1]) % 2 != 0:
+            else:
+                print("!= 0")
+                #DrawBoard()
+                pg.draw.rect(screen, (127, 127, 127), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
+
+            redSquare = -1
+
+            
 
             
 
