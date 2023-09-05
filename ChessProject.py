@@ -156,7 +156,8 @@ def CheckClick():
             #print(redSquare)
             DrawPieces()
         
-        if redSquare != -1:
+        #if redSquare != -1:
+        else:
             print(redSquare)
             pos = pg.mouse.get_pos()
             x = pos[0] // 60
@@ -168,12 +169,14 @@ def CheckClick():
                 print("== 0")
                 #DrawBoard()
                 pg.draw.rect(screen, (255, 255, 255), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
+                DrawPieces()
                 
             #if (redSquare[0] + redSquare[1]) % 2 != 0:
             else:
                 print("!= 0")
                 #DrawBoard()
-                pg.draw.rect(screen, (127, 127, 127), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
+                pg.draw.rect(screen, (200,200,200), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
+                DrawPieces()
 
             redSquare = -1
 
