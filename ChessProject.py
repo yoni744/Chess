@@ -11,16 +11,43 @@ WHITE = pg.Color('white')
 board = chess.Board()
 print(board.legal_moves)
 
-#Setup(loading images, making lists.):
+#Setup(loading images, making lists.)
 white_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook',
                 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn']
-white_locations = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
-                   (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1)]
+black_locations = {"(0, 0)": "b_rook",
+                    "(1,0)": "b_knight",
+                    "(2, 0)": "b_bishop.png",
+                    "(3, 0)": "b_queen", 
+                    "(4, 0": "b_king",
+                    "(5, 0)": "b_bishop",
+                    "(6, 0)": "b_knight.png",
+                    "(7, 0)": "b_rook",
+                    "(1, 1)": "b_pawn",
+                    "(2, 2)": "b_pawn", 
+                    "(3, 2)": "b_pawn",
+                    "(4, 2)": "b_pawn",
+                    "(5, 2)": "b_pawn",
+                    "(6, 2)": "b_pawn",
+                    "(7, 2)": "b_pawn",}
+
 black_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook',
                 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn']
-black_locations = [(0, 7), (1, 7), (2, 7), (3, 7), (4, 7), (5, 7), (6, 7), (7, 7),
-                   (0, 6), (1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6)]
 
+white_locations = {"(0, 8)": "w_rook",
+                    "(1, 8)": "w_knight",
+                    "(2, 8)": "w_bishop.png",
+                    "(3, 8)": "w_queen", 
+                    "(4, 8)": "w.king",
+                    "(5, 8)": "w_bishop",
+                    "(6, 8)": "w_knight.png",
+                    "(7, 7)": "w_rook",
+                    "(1, 7)": "w_pawn",
+                    "(2, 7)": "w_pawn", 
+                    "(3, 7)": "w_pawn",
+                    "(4, 7)": "w_pawn",
+                    "(5, 7)": "w_pawn",
+                    "(6, 7)": "w_pawn",
+                    "(7, 7)": "w_pawn",}
 captured_pieces_white = []
 captured_pieces_black = []
 
@@ -40,8 +67,6 @@ white_pawn = pygame.image.load('w_pawn.png')
 white_images = [white_pawn, white_queen, white_king, white_knight, white_rook, white_bishop]
 black_images = [black_pawn, black_queen, black_king, black_knight, black_rook, black_bishop]    
 piece_list = ['pawn', 'queen', 'king', 'knight', 'rook', 'bishop']
-
-
 
 # 0 - whites turn no selection: 1-whites turn piece selected: 2- black turn no selection, 3 - black turn piece selected
 turn_step = 0
@@ -67,11 +92,10 @@ def DrawBoard():
     screen.blit(background, (60, 60))
 
     pg.display.flip()
-    clock.tick(30)
+    clock.tick(60)
 
-
-
-def DrawPieces():
+class DrawPieces():
+    def DrawStart():
         for i in range(len(black_pieces)):
             if black_pieces[i] == "pawn":
                 for i in range(9):
@@ -136,16 +160,58 @@ def DrawPieces():
 
                 if white_pieces[i] == "queen":
                     screen.blit(white_queen, (300, 480))
-            
+    
+    def DrawBPawn(location):
+        screen.blit(black_pawn, (location[0] * 60, location[1] * 60))
+
+    def DrawBRook(location):
+        screen.blit(black_rook, (location[0] * 60, location[1] * 60))
+
+    def DrawBBishop(location):
+        screen.blit(black_bishop, (location[0] * 60, location[1] * 60))
+
+    def DrawBKnight(location):
+        screen.blit(black_knight, (location[0] * 60, location[1] * 60))
+
+    def DrawBQueen(location):
+        screen.blit(black_queen, (location[0] * 60, location[1] * 60))
+
+    def DrawBKing(location):
+        screen.blit(black_King, (location[0] * 60, location[1] * 60))
+
+    
+    def DrawWPawn(location):
+        screen.blit(white_pawn, (location[0] * 60, location[1] * 60))
+
+    def DrawWRook(location):
+        screen.blit(white_rook, (location[0] * 60, location[1] * 60))
+
+    def DrawWBishop(location):
+        screen.blit(white_bishop, (location[0] * 60, location[1] * 60))
+
+    def DrawWKnight(location):
+        screen.blit(white_knight, (location[0] * 60, location[1] * 60))
+
+    def DrawWQueen(location):
+        screen.blit(white_queen, (location[0] * 60, location[1] * 60))
+
+    def DrawWKing(location):
+        screen.blit(white_King, (location[0] * 60, location[1] * 60))
+
+
+    
 
 def CheckClick():
     left = pg.mouse.get_pressed()
     pg.mouse.get_rel()
-    global redSquare, colour, x, y
     pos = 0
     x = 0
     y = 0
+    piece = 0
+    global redSquare
+    global colour
     if left[0]:
+        print(redSquare)
         if redSquare == -1:
             pos = pg.mouse.get_pos()
             x = pos[0] // 60
@@ -153,34 +219,36 @@ def CheckClick():
             colour = (255, 0, 0)
             pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
             redSquare = x, y
-            #print(redSquare)
-            DrawPieces()
+            DrawPieces.DrawStart()
         
-        #if redSquare != -1:
-        else:
+        if redSquare != -1:
+            add = redSquare[0] + redSquare[1]
+            print(add)
             print(redSquare)
-            pos = pg.mouse.get_pos()
-            x = pos[0] // 60
-            y = pos[1] // 60
-            pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
-            DrawPieces()
-            
-            if (redSquare[0] + redSquare[1]) % 2 == 0:
-                print("== 0")
-                #DrawBoard()
-                pg.draw.rect(screen, (255, 255, 255), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
-                DrawPieces()
-                
-            #if (redSquare[0] + redSquare[1]) % 2 != 0:
-            else:
-                print("!= 0")
-                #DrawBoard()
-                pg.draw.rect(screen, (200,200,200), pg.Rect(redSquare[0] * 60, redSquare[1] * 60, 60, 60))
-                DrawPieces()
+            if add % 2 == 0:
+                x = redSquare[0] * 60
+                y = redSquare[1] * 60
+                colour = (190, 190, 190, 255)
+                pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
+                redSquare = -1
+                pos = pg.mouse.get_pos()
+                x = pos[0] // 60
+                y = pos[1] // 60
+                pg.draw.rect(screen, (255, 0, 0), pg.Rect(x * 60, y * 60, 60, 60))
 
-            redSquare = -1
+            if add % 2 != 0:
+                x = redSquare[0] * 60
+                y = redSquare[1] * 60
+                colour = (255, 255, 255, 255)
+                pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
+                redSquare = -1
+                pos = pg.mouse.get_pos()
+                x = pos[0] // 60
+                y = pos[1] // 60
+                pg.draw.rect(screen, (255, 0, 0), pg.Rect(x * 60, y * 60, 60, 60))
 
-            
+        else:
+            print("WEIRD")
 
             
 
@@ -192,7 +260,7 @@ def main():
     global clock
     clock = pg.time.Clock()
     DrawBoard()
-    DrawPieces()
+    DrawPieces.DrawStart()
     running = True
     global redSquare
     redSquare = -1
