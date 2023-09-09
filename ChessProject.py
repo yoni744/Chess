@@ -32,14 +32,14 @@ locations = {"(1, 1)": "b_rook",
                     "(6, 2)": "b_pawn",
                     "(7, 2)": "b_pawn",
                     "(8, 2)": "b_pawn",
-                    "(1 ,3)": "w_sqaure",
-                    "(2 ,3)": "b_sqaure",
-                    "(3 ,3)": "w_sqaure",
-                    "(4 ,3)": "b_sqaure",
-                    "(5 ,3)": "w_sqaure",
-                    "(6 ,3)": "b_sqaure",
-                    "(7 ,3)": "w_sqaure",
-                    "(8 ,3)": "b_sqaure",
+                    "(1, 3)": "w_sqaure",
+                    "(2, 3)": "b_sqaure",
+                    "(3, 3)": "w_sqaure",
+                    "(4, 3)": "b_sqaure",
+                    "(5, 3)": "w_sqaure",
+                    "(6, 3)": "b_sqaure",
+                    "(7, 3)": "w_sqaure",
+                    "(8, 3)": "b_sqaure",
                     "(1, 4)": "b_sqaure",
                     "(2, 4)": "w_sqaure",
                     "(3, 4)": "b_sqaure",
@@ -269,9 +269,6 @@ def main():
                 if squareSelected == (row, collum): # user clicked same square twice, reseting var
                     squareSelected = ()
                     playerClicks = []
-                else:
-                    pass
-                # add dict with all sqaures(8x8 and check by piece that way)
         
                 else:
                     squareSelected = (row, collum)
