@@ -8,19 +8,21 @@ import time
 BLACK = pg.Color('grey')
 WHITE = pg.Color('white')
 
+
 board = chess.Board()
 print(board.legal_moves)
 
 #Setup(loading images, making lists.)
 white_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook',
                 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn']
-black_locations = {"(1, 1)": "b_rook",
-                    "(2,1)": "b_knight",
-                    "(3, 1)": "b_bishop.png",
+
+locations = {"(1, 1)": "b_rook",
+                    "(2, 1)": "b_knight",
+                    "(3, 1)": "b_bishop",
                     "(4, 1)": "b_king", 
                     "(5, 1)": "b_queen",
                     "(6, 1)": "b_bishop",
-                    "(7, 1)": "b_knight.png",
+                    "(7, 1)": "b_knight",
                     "(8, 1)": "b_rook",
                     "(1, 2)": "b_pawn",
                     "(2, 2)": "b_pawn", 
@@ -29,18 +31,54 @@ black_locations = {"(1, 1)": "b_rook",
                     "(5, 2)": "b_pawn",
                     "(6, 2)": "b_pawn",
                     "(7, 2)": "b_pawn",
-                    "(8, 2)": "b_pawn"}
-
-black_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook',
-                'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn']
-
-white_locations = {"(1, 8)": "w_rook",
+                    "(8, 2)": "b_pawn",
+                    "(1 ,3)": "w_sqaure",
+                    "(2 ,3)": "b_sqaure",
+                    "(3 ,3)": "w_sqaure",
+                    "(4 ,3)": "b_sqaure",
+                    "(5 ,3)": "w_sqaure",
+                    "(6 ,3)": "b_sqaure",
+                    "(7 ,3)": "w_sqaure",
+                    "(8 ,3)": "b_sqaure",
+                    "(1, 4)": "b_sqaure",
+                    "(2, 4)": "w_sqaure",
+                    "(3, 4)": "b_sqaure",
+                    "(4, 4)": "w_sqaure",
+                    "(5, 4)": "b_sqaure",
+                    "(6, 4)": "w_sqaure",
+                    "(7, 4)": "b_sqaure",
+                    "(8, 4)": "w_sqaure",
+                    "(1, 5)": "w_square",
+                    "(2, 5)": "b_square",
+                    "(3, 5)": "w_square",
+                    "(4, 5)": "b_square",
+                    "(5, 5)": "w_square",
+                    "(6, 5)": "b_square",
+                    "(7, 5)": "w_square",
+                    "(8, 5)": "b_square",
+                    "(1, 6)": "b_square",
+                    "(2, 6)": "w_square",
+                    "(3, 6)": "b_square",
+                    "(4, 6)": "w_square",
+                    "(5, 6)": "b_square",
+                    "(6, 6)": "w_square",
+                    "(7, 6)": "b_square",
+                    "(8, 6)": "w_square",
+                    "(1, 7)": "w_square",
+                    "(2, 7)": "b_square",
+                    "(3, 7)": "w_square",
+                    "(4, 7)": "b_square",
+                    "(5, 7)": "w_square",
+                    "(6, 7)": "b_square",
+                    "(7, 7)": "w_square",
+                    "(8, 7)": "b_square",
+                    "(1, 8)": "w_rook",
                     "(2, 8)": "w_knight",
-                    "(3, 8)": "w_bishop.png",
+                    "(3, 8)": "w_bishop",
                     "(4, 8)": "w_queen", 
                     "(5, 8)": "w.king",
                     "(6, 8)": "w_bishop",
-                    "(7, 8)": "w_knight.png",
+                    "(7, 8)": "w_knight",
                     "(8, 8)": "w_rook",
                     "(1, 7)": "w_pawn",
                     "(2, 7)": "w_pawn", 
@@ -50,6 +88,10 @@ white_locations = {"(1, 8)": "w_rook",
                     "(6, 7)": "w_pawn",
                     "(7, 7)": "w_pawn",
                     "(8, 7)": "w_pawn"}
+
+black_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook',
+                'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn']
+
 captured_pieces_white = []
 captured_pieces_black = []
 
@@ -179,7 +221,7 @@ class DrawPieces():
         screen.blit(black_queen, (location[0] * 60, location[1] * 60))
 
     def DrawBKing(location):
-        screen.blit(black_King, (location[0] * 60, location[1] * 60))
+        screen.blit(black_king, (location[0] * 60, location[1] * 60))
 
     
     def DrawWPawn(location):
@@ -200,104 +242,6 @@ class DrawPieces():
     def DrawWKing(location):
         screen.blit(white_king, (location[0] * 60, location[1] * 60))
 
-
-    
-
-def CheckClick():
-    left = pg.mouse.get_pressed()
-    pg.mouse.get_rel()
-    pos = 0
-    x = 0
-    y = 0
-    piece = ""
-    global redSquare
-    global colour
-    if left[0]:
-        print(redSquare)
-        if redSquare == -1:
-            pos = pg.mouse.get_pos()
-            x = pos[0] // 60
-            y = pos[1] // 60
-            colour = (255, 0, 0)
-            pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
-            redSquare = x, y
-            #DrawPieces.DrawStart()
-        
-        if redSquare != -1:
-            add = redSquare[0] + redSquare[1]
-            print(add)
-            print(redSquare)
-            if add % 2 == 0:
-                x = redSquare[0] * 60
-                y = redSquare[1] * 60
-                colour = (190, 190, 190, 255)
-                #pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
-                DrawBoard()
-                #DrawPieces.DrawStart()
-                redSquare = -1
-                pos = pg.mouse.get_pos()
-                x = pos[0] // 60
-                y = pos[1] // 60
-                pg.draw.rect(screen, (255, 0, 0), pg.Rect(x * 60, y * 60, 60, 60))
-                try:
-                    if x < 8 and y < 8:
-
-                        piece = white_locations[f"({x}, {y})"]
-                        print(piece)
-                        if "pawn" in piece:
-                            DrawPieces.DrawWPawn((x, y))
-                    
-                        if "knight" in piece:
-                            DrawPieces.DrawWKnight((x, y))
-                    
-                        if "rook" in piece:
-                            DrawPieces.DrawWRook((x, y))
-
-                        if "bishop" in piece:
-                            DrawPieces.DrawWBishop((x, y))
-                        
-                        if "king" in piece:
-                            DrawPieces.DrawWKing((x, y))
-
-                        if "queen" in piece:
-                            DrawPieces.DrawWQueen((x, y))
-
-                except:
-                    if x < 8 and y < 8:
-                        piece = black_locations[f"({x}, {y})"]
-
-                        if "pawn" in piece:
-                            DrawPieces.DrawBPawn((x, y))
-                    
-                        if "knight" in piece:
-                            DrawPieces.DrawBKnight((x, y))
-                    
-                        if "rook" in piece:
-                            DrawPieces.DrawBRook((x, y))
-
-                        if "bishop" in piece:
-                            DrawPieces.DrawBBishop((x, y))
-                        
-                        if "king" in piece:
-                            DrawPieces.DrawBKing((x, y))
-
-                        if "queen" in piece:
-                            DrawPieces.DrawBQueen((x, y))
-                        
-            if add % 2 != 0:
-                x = redSquare[0] * 60
-                y = redSquare[1] * 60
-                colour = (255, 255, 255, 255)
-                pg.draw.rect(screen, colour, pg.Rect(x * 60, y * 60, 60, 60))
-                redSquare = -1
-                pos = pg.mouse.get_pos()
-                x = pos[0] // 60
-                y = pos[1] // 60
-                pg.draw.rect(screen, (255, 0, 0), pg.Rect(x * 60, y * 60, 60, 60))
-
-        else:
-            print("WEIRD")
-
             
 
 
@@ -310,16 +254,33 @@ def main():
     DrawBoard()
     DrawPieces.DrawStart()
     running = True
-    global redSquare
-    redSquare = -1
+    squareSelected = () # Where player clicked after clicking a piece
+    playerClicks = [] # keep track of clicks, piece location and where to move piece to
     
     while running:
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 running = False
             
-            else:
-                CheckClick()
+            elif e.type == pg.MOUSEBUTTONDOWN:
+                location = pg.mouse.get_pos() # [0] = x | [1] = y
+                collum = location[0] // 60
+                row = location[1] // 60
+                if squareSelected == (row, collum): # user clicked same square twice, reseting var
+                    squareSelected = ()
+                    playerClicks = []
+                else:
+                    pass
+                # add dict with all sqaures(8x8 and check by piece that way)
+        
+                else:
+                    squareSelected = (row, collum)
+                    playerClicks.append(squareSelected) # append for both clicks(1 and 2)
+                
+                if len(playerClicks) == 2:
+                    Move
+
+
                 
 
         clock.tick(60)
