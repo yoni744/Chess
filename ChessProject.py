@@ -16,7 +16,8 @@ print(board.legal_moves)
 white_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook',
                 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn']
 
-locations = {"(1, 1)": "b_rook",
+global locations
+locations = {       "(1, 1)": "b_rook",
                     "(2, 1)": "b_knight",
                     "(3, 1)": "b_bishop",
                     "(4, 1)": "b_king", 
@@ -135,8 +136,8 @@ def DrawBoard():
     screen.fill((20, 70, 90))
     screen.blit(background, (60, 60))
 
-    pg.display.flip()
-    clock.tick(60)
+    #pg.display.flip()
+    #clock.tick(60)
 
 class DrawPieces():
     def DrawStart():
@@ -242,7 +243,19 @@ class DrawPieces():
     def DrawWKing(location):
         screen.blit(white_king, (location[0] * 60, location[1] * 60))
 
-            
+
+def MovePiece(location, sqSelected):
+    x = location[0] // 60
+    y = location[1] // 60
+    piece = locations[f"({x}, {y})"]
+    if(piece.startswith("w")):
+        if("square" in piece):
+            pass
+
+        if "pawn" in piece:
+            pg.draw.rect(screen, (255, 255, 255, 255), Rect(x, y, 60, 60))
+            DrawPieces.DrawWPawn(sqSelected[0], sqSelected[1])
+
 
 
 def main():
@@ -275,7 +288,7 @@ def main():
                     playerClicks.append(squareSelected) # append for both clicks(1 and 2)
                 
                 if len(playerClicks) == 2:
-                    Move
+                    MovePiece(location, squareSelected)
 
 
                 
