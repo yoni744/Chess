@@ -22,7 +22,7 @@ def DrawBoard(screen):
     colors = [p.Color("white"), p.Color("gray")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
-            color = colors[((r + c) % 2)]
+            color = colors[((r + c) % 2)] # if (r + c) % 2 = 0 then its a white sq, else black.
             p.draw.rect(screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 def DrawPieces(screen, board):
@@ -41,10 +41,10 @@ def main():
     gs = Engine.GameState()
     validMoves = gs.GetValidMoves()
     LoadImages() # Only doing this once.
-    running = True
     sqSelected = ()
     playerClicks = []
     moveMade = False
+    running = True
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
