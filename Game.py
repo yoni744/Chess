@@ -1,5 +1,6 @@
 import pygame as p
 import Engine
+import chess
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8 # board is 8x8
@@ -62,7 +63,13 @@ def main():
                     playerClicks.append(sqSelected)
                 
                 if len(playerClicks) == 2:
-                    MovePiece
+                    move = Engine.Move(playerClicks[0], playerClicks[1], gs.board)
+                    print(f"{move}: move")
+                    #if move in chess.Board().legal_moves:
+                    print(move.getChessNotation())
+                    gs.MakeMove(move)
+                    sqSelected = () # reseting both vars
+                    playerClicks = []
                     
         DrawGameState(screen, gs)
         clock.tick(MAX_FPS)
