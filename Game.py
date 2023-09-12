@@ -64,10 +64,13 @@ def main():
                 
                 if len(playerClicks) == 2:
                     move = Engine.Move(playerClicks[0], playerClicks[1], gs.board)
-                    print(move.getChessNotation())
-                    if move in validMoves:
-                        gs.MakeMove(move)
-                        moveMade = True
+                    for i in range(len(validMoves)):
+                        if move.getChessNotation() in (validMoves[i].getChessNotation()):
+                            gs.MakeMove(move)
+                            moveMade = True
+                            #i = 0
+                            break
+                    
                     sqSelected = () # reseting both vars
                     playerClicks = []
 

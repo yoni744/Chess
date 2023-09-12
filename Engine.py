@@ -42,23 +42,23 @@ class GameState():
                 moves.append(Move((r, c), (r - 1, c), self.board))
                 if r == 6 and self.board[r - 2][c] == "--":# 2 sq pawn move
                     moves.append(Move((r, c), (r - 2, c), self.board))
-            if c - 1 >= 0:
+            if c - 1 >= 0: # Capture to the left
                 if self.board[r - 1][c - 1][0] == "b": # enemey piece to capture
                     moves.append(Move((r, c), (r - 1, c - 1), self.board))
-            if c + 1 <= 7:
+            if c + 1 <= 7: # Capture to the right
                 if self.board[r - 1][c + 1][0] == "b":
-                    moves.append(Move((r, c), (r - 1, c + 1), self.board))\
+                    moves.append(Move((r, c), (r - 1, c + 1), self.board))
         
         else: # black pawn moves
             if self.board[r + 1][c] == "--": # 1 sq pawn move
                 moves.append(Move((r, c), (r + 1, c), self.board))
-                if r == 6 and self.board[r + 2][c] == "--":# 2 sq pawn move
+                if r == 1 and self.board[r + 2][c] == "--":# 2 sq pawn move
                     moves.append(Move((r, c), (r + 2, c), self.board))
-            if c - 1 >= 0:
-                if self.board[r + 1][c - 1][0] == "b": # enemey piece to capture
+            if c - 1 >= 0: # Capture to the left
+                if self.board[r + 1][c - 1][0] == "w": # enemey piece to capture
                     moves.append(Move((r, c), (r + 1, c - 1), self.board))
-            if c + 1 <= 7:
-                if self.board[r - 1][c + 1][0] == "b":
+            if c + 1 <= 7: # Capture to the right
+                if self.board[r + 1][c + 1][0] == "w":
                     moves.append(Move((r, c), (r + 1, c + 1), self.board))
 
     def GetRookMoves(self, r, c, moves):
