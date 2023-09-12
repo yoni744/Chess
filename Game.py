@@ -68,11 +68,11 @@ def main():
                         if move.getChessNotation() in (validMoves[i].getChessNotation()):
                             gs.MakeMove(move)
                             moveMade = True
-                            #i = 0
+                            sqSelected = () # reseting both vars
+                            playerClicks = []
                             break
-                    
-                    sqSelected = () # reseting both vars
-                    playerClicks = []
+                        else:
+                            playerClicks = [sqSelected]
 
         if moveMade:
             validMoves = gs.GetValidMoves()
