@@ -15,7 +15,8 @@ class GameState():
         
         self.whiteToMove = True
         self.moveLog = []
-        
+        self.whiteKingLocation = (7, 4)
+        self.blackKingLocation = (0, 4)
 
     
 
@@ -117,7 +118,7 @@ class GameState():
         self.GetBishopMoves(r, c, moves)
 
     def GetKingMoves(self, r, c, moves):
-        kingMoves = ((-1, 0), (-1, -1), (-1, 1), (1, 1), (1, -1), (1, 0), (0, 1), (0, -1))
+        kingMoves = ((-1, 0), (-1, -1), (-1, 1), (0, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
         enemyColor = "b" if self.whiteToMove else "w"
         for i in range(8):
             endRow = r + kingMoves[i][0]
