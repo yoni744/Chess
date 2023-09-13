@@ -15,6 +15,9 @@ class GameState():
         
         self.whiteToMove = True
         self.moveLog = []
+        
+
+    
 
 
     def MakeMove(self, move):
