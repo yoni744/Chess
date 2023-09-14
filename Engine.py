@@ -19,6 +19,16 @@ class GameState():
         self.blackKingLocation = (0, 4)
 
     
+    def undoMove(self):
+        if len(self.moveLog) != 0: #make sure there is a move to undo
+            move = self.moveLog.pop()
+            self.board[move.startRow][move.startCol] = move.pieceMoved
+            self.board[move.endRow][move.endCol] = move.pieceCaptured
+            self.whiteToMove = not self.whiteToMove
+            if(move.pieceMoved == "wK"):
+                self.whiteKingLocation = (move.startRow, move.startCol)
+            elif(move.pieceMoved == "bK"):
+                self.blackKingLocation = (move.startRow, move.startCol)
 
 
     def MakeMove(self, move):
@@ -26,9 +36,21 @@ class GameState():
         self.board[move.endRow][move.endCol] = move.pieceMoved
         self.moveLog.append(move)
         self.whiteToMove = not self.whiteToMove
+        if(move.pieceMoved == "wK"):
+            self.whiteKingLocation = (move.endRow, move.endCol)
+        elif(move.pieceMoved == "bK"):
+            self.blackKingLocation = (move.endRow, move.endCol)
 
     def GetValidMoves(self):    # All moves, with check
-        return self.GetAllPossibleMoves()
+        moves = self.GetAllPossibleMoves()
+        for i in range(len(moves)-1, -1, -1):
+            self.MakeMove(moves[i])
+            self.whiteToMove = not self.whiteToMove
+            if self.InCheck():
+                moves.remove(moves[i])
+            self.whiteToMove = not self.whiteToMove
+            self.undoMove()
+        return moves
 
     def GetAllPossibleMoves(self):    #All possible moves
         moves = []
@@ -39,6 +61,26 @@ class GameState():
                     piece = self.board[r][c][1] # Taking piece's name from given square
                     self.moveFunctions[piece](r, c, moves)
         return moves
+
+    def InCheck(self):
+        print(self.whiteKingLocation)
+        print(self.blackKingLocation)
+        if self.whiteToMove:
+            return self.SquareUnderATtack(self.whiteKingLocation[0], self.whiteKingLocation[1])
+        else:
+            return self.SquareUnderATtack(self.blackKingLocation[0], self.blackKingLocation[1])
+
+    def SquareUnderATtack(self, r, c):
+        self.whiteToMove = not self.whiteToMove
+        oppMoves = self.GetAllPossibleMoves()
+        self.whiteToMove = not self.whiteToMove
+        for move in oppMoves:
+            if move.endRow == r and move.endCol == c:
+                return True
+        return False
+            
+        
+
 
     def GetPawnMoves(self, r, c, moves):
         if self.whiteToMove: #White pawn moves
@@ -118,8 +160,13 @@ class GameState():
         self.GetBishopMoves(r, c, moves)
 
     def GetKingMoves(self, r, c, moves):
+<<<<<<< Updated upstream
         kingMoves = ((-1, 0), (-1, -1), (-1, 1), (1, 1), (1, -1), (1, 0), (0, 1), (0, -1))
         enemyColor = "b" if self.whiteToMove else "w"
+=======
+        kingMoves = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, -1))
+        allyColor = "w" if self.whiteToMove else "b"
+>>>>>>> Stashed changes
         for i in range(8):
             endRow = r + kingMoves[i][0]
             endCol = c + + kingMoves[i][1]

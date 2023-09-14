@@ -70,6 +70,7 @@ def main():
                             moveMade = True
                             sqSelected = () # reseting both vars
                             playerClicks = []
+                            print(move.getChessNotation())
                             break
                         else:
                             playerClicks = [sqSelected]
