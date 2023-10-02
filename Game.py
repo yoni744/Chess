@@ -64,7 +64,9 @@ def main():
                 
                 if len(playerClicks) == 2:
                     move = Engine.Move(playerClicks[0], playerClicks[1], gs.board)
+                    print(f"{len(validMoves)}: Len") # Debugging
                     for i in range(len(validMoves)):
+                        print(validMoves[i].getChessNotation() + " Valid") # Debugging
                         if move.getChessNotation() in (validMoves[i].getChessNotation()):
                             gs.MakeMove(move)
                             moveMade = True

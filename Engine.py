@@ -47,9 +47,12 @@ class GameState():
             self.MakeMove(moves[i])
             self.whiteToMove = not self.whiteToMove
             if self.InCheck():
+                print(f"{moves[i].getChessNotation()}: Moves") # Debugging
                 moves.remove(moves[i])
             self.whiteToMove = not self.whiteToMove
             self.undoMove()
+        for move in moves: # Debugging
+            print(move.getChessNotation() + " Moveeeee") # Debugging
         return moves
 
     def GetAllPossibleMoves(self):    #All possible moves
@@ -63,8 +66,6 @@ class GameState():
         return moves
 
     def InCheck(self):
-        print(self.whiteKingLocation)
-        print(self.blackKingLocation)
         if self.whiteToMove:
             return self.SquareUnderATtack(self.whiteKingLocation[0], self.whiteKingLocation[1])
         else:
@@ -160,13 +161,8 @@ class GameState():
         self.GetBishopMoves(r, c, moves)
 
     def GetKingMoves(self, r, c, moves):
-<<<<<<< Updated upstream
-        kingMoves = ((-1, 0), (-1, -1), (-1, 1), (1, 1), (1, -1), (1, 0), (0, 1), (0, -1))
-        enemyColor = "b" if self.whiteToMove else "w"
-=======
         kingMoves = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, -1))
         allyColor = "w" if self.whiteToMove else "b"
->>>>>>> Stashed changes
         for i in range(8):
             endRow = r + kingMoves[i][0]
             endCol = c + + kingMoves[i][1]
