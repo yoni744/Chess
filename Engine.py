@@ -41,19 +41,19 @@ class GameState():
         elif(move.pieceMoved == "bK"):
             self.blackKingLocation = (move.endRow, move.endCol)
 
+
     def GetValidMoves(self):    # All moves, with check
         moves = self.GetAllPossibleMoves()
         for i in range(len(moves)-1, -1, -1):
             self.MakeMove(moves[i])
             self.whiteToMove = not self.whiteToMove
             if self.InCheck():
-                print(f"{moves[i].getChessNotation()}: Moves") # Debugging
+                print(f"{moves[i].getChessNotation()}: Deleted moves") # Debugging
                 moves.remove(moves[i])
             self.whiteToMove = not self.whiteToMove
             self.undoMove()
-        for move in moves: # Debugging
-            print(move.getChessNotation() + " Moveeeee") # Debugging
         return moves
+
 
     def GetAllPossibleMoves(self):    #All possible moves
         moves = []
@@ -65,11 +65,13 @@ class GameState():
                     self.moveFunctions[piece](r, c, moves)
         return moves
 
+
     def InCheck(self):
         if self.whiteToMove:
             return self.SquareUnderATtack(self.whiteKingLocation[0], self.whiteKingLocation[1])
         else:
             return self.SquareUnderATtack(self.blackKingLocation[0], self.blackKingLocation[1])
+
 
     def SquareUnderATtack(self, r, c):
         self.whiteToMove = not self.whiteToMove
@@ -79,10 +81,8 @@ class GameState():
             if move.endRow == r and move.endCol == c:
                 return True
         return False
-            
-        
-
-
+          
+           
     def GetPawnMoves(self, r, c, moves):
         if self.whiteToMove: #White pawn moves
             if self.board[r - 1][c] == "--": # 1 sq pawn move
@@ -107,6 +107,7 @@ class GameState():
             if c + 1 <= 7: # Capture to the right
                 if self.board[r + 1][c + 1][0] == "w":
                     moves.append(Move((r, c), (r + 1, c + 1), self.board))
+
 
     def GetRookMoves(self, r, c, moves):
         directions = ((-1, 0), (0, -1), (1, 0), (0, 1)) # Up, left, down, right
@@ -138,6 +139,7 @@ class GameState():
                 if endPiece[0] != allayColor:
                     moves.append(Move((r, c), (endRow, endCol), self.board))
 
+
     def GetBishopMoves(self, r, c, moves):
         directions = ((1, 1), (1, -1), (-1, -1), (-1, 1))
         enemyColor = "b" if self.whiteToMove else "w"
@@ -156,9 +158,11 @@ class GameState():
                 else: # off board
                     break
 
+
     def GetQueenMoves(self, r, c, moves):
         self.GetRookMoves(r, c, moves)
         self.GetBishopMoves(r, c, moves)
+
 
     def GetKingMoves(self, r, c, moves):
         kingMoves = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, -1))
@@ -204,5 +208,3 @@ class Move():
 
     def GetRankFile(self, r, c):
         return self.colsToFiles[c] + self.rowsToRanks[r]
-
-    
