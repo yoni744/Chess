@@ -17,6 +17,16 @@ def LoadImages():
 def DrawGameState(screen, gs):
     DrawBoard(screen) # Draw the actual board no pieces
     DrawPieces(screen, gs.board) # Drawing pieces
+    #DrawPiecesTEST(screen, gs, gs.board) #Only draw black king and white queen to check for engine mistakes.
+    
+    
+def DrawPiecesTEST(screen, gs, board): #Only draw black king and white queen to check for engine mistakes.
+    piece = gs.board[7][3]
+    screen.blit(IMAGES[piece], p.Rect(3 * SQ_SIZE, 7 * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+    piece = gs.board[0][4]
+    screen.blit(IMAGES[piece], p.Rect(4 * SQ_SIZE, 0 * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+    
+
 
 def DrawBoard(screen):
     colors = [p.Color("white"), p.Color("gray")]
