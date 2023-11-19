@@ -63,10 +63,10 @@ class GameState():
             for c in range(len(self.board[r])): # num of colls in row
                 turn = self.board[r][c][0]
                 if (turn == "w" and self.whiteToMove) or (turn == "b" and not self.whiteToMove):
-                    #piece = self.board[r][c][1] # Taking piece's name from given square
-                    #self.moveFunctions[piece](r, c, moves)
-                    self.moveFunctions["Q"](r, c, moves)
-                    self.moveFunctions["K"](r, c, moves)
+                    piece = self.board[r][c][1] # Taking piece's name from given square
+                    self.moveFunctions[piece](r, c, moves)
+                    #self.moveFunctions["Q"](r, c, moves)
+                    #self.moveFunctions["K"](r, c, moves)
         return moves
 
 
