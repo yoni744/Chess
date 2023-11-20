@@ -17,21 +17,8 @@ class GameState():
         self.moveLog = []
         self.whiteKingLocation = (7, 4)
         self.blackKingLocation = (0, 4)
-        self.checkMate = False
-        self.staleMate = False
 
-
-    def MakeMove(self, move):
-        self.board[move.startRow][move.startCol] = "--"
-        self.board[move.endRow][move.endCol] = move.pieceMoved
-        self.moveLog.append(move)
-        self.whiteToMove = not self.whiteToMove
-        if(move.pieceMoved == "wK"):
-            self.whiteKingLocation = (move.endRow, move.endCol)
-        elif(move.pieceMoved == "bK"):
-            self.blackKingLocation = (move.endRow, move.endCol)
     
-
     def undoMove(self):
         if len(self.moveLog) != 0: #make sure there is a move to undo
             move = self.moveLog.pop()
@@ -44,25 +31,29 @@ class GameState():
                 self.blackKingLocation = (move.startRow, move.startCol)
 
 
+    def MakeMove(self, move):
+        self.board[move.startRow][move.startCol] = "--"
+        self.board[move.endRow][move.endCol] = move.pieceMoved
+        self.moveLog.append(move)
+        self.whiteToMove = not self.whiteToMove
+        if(move.pieceMoved == "wK"):
+            self.whiteKingLocation = (move.endRow, move.endCol)
+        elif(move.pieceMoved == "bK"):
+            self.blackKingLocation = (move.endRow, move.endCol)
+
+
     def GetValidMoves(self):    # All moves, with check
         moves = self.GetAllPossibleMoves()
         for i in range(len(moves)-1, -1, -1):
             self.MakeMove(moves[i])
             self.whiteToMove = not self.whiteToMove
             if self.InCheck():
+
+                print("CHECK")
                 print(f"{moves[i].getChessNotation()}: Deleted moves") # Debugging
                 moves.remove(moves[i])
             self.whiteToMove = not self.whiteToMove
             self.undoMove()
-
-            if len(moves) == 0:
-                if self.InCheck():
-                    self.checkMate = True
-                else:
-                    self.staleMate = True
-            else:
-                self.checkMate = False
-                self.staleMate = False
         return moves
 
 
@@ -74,17 +65,19 @@ class GameState():
                 if (turn == "w" and self.whiteToMove) or (turn == "b" and not self.whiteToMove):
                     piece = self.board[r][c][1] # Taking piece's name from given square
                     self.moveFunctions[piece](r, c, moves)
+                    #self.moveFunctions["Q"](r, c, moves)
+                    #self.moveFunctions["K"](r, c, moves)
         return moves
 
 
     def InCheck(self):
         if self.whiteToMove:
-            return self.SquareUnderATtack(self.whiteKingLocation[0], self.whiteKingLocation[1])
+            return self.SquareUnderAttack(self.whiteKingLocation[0], self.whiteKingLocation[1])
         else:
-            return self.SquareUnderATtack(self.blackKingLocation[0], self.blackKingLocation[1])
+            return self.SquareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])
 
 
-    def SquareUnderATtack(self, r, c):
+    def SquareUnderAttack(self, r, c):
         self.whiteToMove = not self.whiteToMove
         oppMoves = self.GetAllPossibleMoves()
         self.whiteToMove = not self.whiteToMove
