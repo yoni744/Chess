@@ -44,14 +44,12 @@ class GameState():
 
     def GetValidMoves(self):    # All moves, with check
         moves = self.GetAllPossibleMoves()
-        for i in range(len(moves)-1, -1, -1):
-            self.MakeMove(moves[i])
+        for move in moves:
+            self.MakeMove(move)
             self.whiteToMove = not self.whiteToMove
             if self.InCheck():
-
-                print("CHECK")
-                print(f"{moves[i].getChessNotation()}: Deleted moves") # Debugging
-                moves.remove(moves[i])
+                print(f"{move.getChessNotation()}: Deleted moves") # Debugging
+                moves.remove(move)
             self.whiteToMove = not self.whiteToMove
             self.undoMove()
         return moves
@@ -65,9 +63,8 @@ class GameState():
                 if (turn == "w" and self.whiteToMove) or (turn == "b" and not self.whiteToMove):
                     piece = self.board[r][c][1] # Taking piece's name from given square
                     self.moveFunctions[piece](r, c, moves)
-                    #self.moveFunctions["Q"](r, c, moves)
-                    #self.moveFunctions["K"](r, c, moves)
         return moves
+
 
 
     def InCheck(self):
