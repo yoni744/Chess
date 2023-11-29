@@ -1,3 +1,5 @@
+import threading
+
 class GameState():
     def __init__(self):
         self.board = [
@@ -12,11 +14,17 @@ class GameState():
 
         self.moveFunctions = {"p": self.GetPawnMoves, "R": self.GetRookMoves, "B": self.GetBishopMoves,
                             "N": self.GetKnightMoves, "Q": self.GetQueenMoves, "K": self.GetKingMoves}
+
+        self.lettersToNumber = {"a": 0, "b": 1, "c": 2, "d": 3,
+                                "e": 4, "f": 5, "g": 6, "h": 7}
+    
+        self.numberToNumbers = {"8": 0, "7": 1, "6": 2, "5": 3, "4": 4, "3": 5, "2": 6, "1": 7}
         
         self.whiteToMove = True
         self.moveLog = []
         self.whiteKingLocation = (7, 4)
         self.blackKingLocation = (0, 4)
+        self.moves = []
 
     
     def undoMove(self):
@@ -43,16 +51,88 @@ class GameState():
 
 
     def GetValidMoves(self):    # All moves, with check
-        moves = self.GetAllPossibleMoves()
-        for move in moves:
-            self.MakeMove(move)
-            self.whiteToMove = not self.whiteToMove
-            if self.InCheck():
-                print(f"{move.getChessNotation()}: Deleted moves") # Debugging
-                moves.remove(move)
-            self.whiteToMove = not self.whiteToMove
-            self.undoMove()
-        return moves
+        blockingMoves = []
+        self.moves = self.GetAllPossibleMoves()
+        
+        if self.InCheck():
+            location = self.GetPieceLocation(self.moveLog)
+            pieceName = self.GetPieceName(location)
+
+            for move in self.moves:
+                print(f"Checking move: {move.getChessNotation()}")
+                self.MakeMove(move)
+                self.whiteToMove = not self.whiteToMove
+                if self.InCheck():
+                    if pieceName[1] == "B":
+                        blockingMoves = self.GetBlockingMovesBishop(location)
+
+                    if move in blockingMoves:
+                        print(f"Move {move.getChessNotation()} resolves check")
+                        print(len(self.moves))
+                        
+                    else:
+                        print(f"Move {move.getChessNotation()} keeps in check, removing")
+                        self.moves.remove(move)
+                    
+                self.whiteToMove = not self.whiteToMove
+                self.undoMove()
+        
+        print("Final Valid Moves:")
+        for move in blockingMoves:
+            print(move.getChessNotation())
+        return self.moves
+
+
+    def GetPieceName(self, location):
+        return self.board[location[1]][location[0]]
+
+    def GetPieceLocation(self, movelog):
+        log = movelog.copy()
+        for move in log:
+            print(move.getChessNotation())
+        loc = log.pop().getChessNotation()
+        return ((self.lettersToNumber[loc[2]], self.numberToNumbers[loc[3]]))
+
+    def GetBlockingMovesBishop(self, location):
+        blockingMoves = []
+        newLocation = location
+
+        if self.whiteToMove:
+            if location[1] < self.whiteKingLocation[1] and location[0] > self.whiteKingLocation[0]: # If king is on a lower collum and higher row then bishop
+                name = self.GetPieceName(self.GetPieceLocation(newLocation))
+                while name[1] != "K": #w/b K, Only take note of the K(for king).
+                    print("In")
+                    newLocation = list(newLocation)
+                    newLocation[1] += 1
+                    newLocation[0] -= 1
+                    for move in self.moves:
+                        if (move.getChessNotation())[2] == newLocation[0] and (move.getChessNotation())[1] == newLocation[1]:
+                            blockingMoves.append(move)
+        
+        else:
+            if location[1] < self.blackKingLocation[1] and location[0] > self.blackKingLocation[0]: # If king is on a lower collum and higher row then bishop
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K": #w/b K, Only take note of the K(for king).
+                    newLocation = list(newLocation)
+                    if newLocation[0] < 8:
+                        newLocation[0] += 1
+                    
+                    if newLocation[1] > 0:
+                        newLocation[1] -= 1
+
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+                    
+                    name = self.GetPieceName(newLocation) 
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+                        
+        return blockingMoves
+        
+        
+
 
 
     def GetAllPossibleMoves(self):    #All possible moves
@@ -175,7 +255,6 @@ class GameState():
                     endPiece = self.board[endRow][endCol]
                     if endPiece[0] != allyColor:
                         moves.append(Move((r, c), (endRow, endCol), self.board))
-
 
 
 

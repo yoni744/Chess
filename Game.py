@@ -6,7 +6,6 @@ DIMENSION = 8 # board is 8x8
 SQ_SIZE = HEIGHT // DIMENSION
 MAX_FPS = 15 #for animations
 IMAGES = {}
-currentMove = ""
 
 def LoadImages():
     pieces = ["wp", "wR", "wN", "wB", "wK", "wQ", "bp", "bR", "bN", "bB", "bK", "bQ",]
