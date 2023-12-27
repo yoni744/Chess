@@ -54,28 +54,34 @@ class GameState():
             location = self.GetPieceLocation(self.moveLog)
             blockingMoves = self.GetBlockingMovesBishop(location)
             for move in blockingMoves:
-                print(move.getChessNotation(), "Blocking moves")
+                if self.whiteToMove:
+                    if (Move.filesToCols[move.getChessNotation()[0]] != self.WhiteKingLocation[1]):
+                        validMoves.append(move)
+                else:
+                    if(Move.filesToCols[move.getChessNotation()[0]] != self.blackKingLocation[1]):
+                        print(Move.filesToCols[move.getChessNotation()[0]], self.blackKingLocation[0], " LOCATION")
+                        validMoves.append(move)
             
-            while i < len(blockingMoves):
-                validMoves.append(self.moves[i])
-                print(self.moves[i].getChessNotation(), " MOVE VALID ADDED")
-                i += 1
+            #while i < len(blockingMoves):
+                #validMoves.append(self.moves[i])
+                #print(self.moves[i].getChessNotation(), " MOVE VALID ADDED")
+                #i += 1
 
         else:
             validMoves = self.moves
         
-        for move in self.moves:
-            self.MakeMove(move)
-            self.whiteToMove = not self.whiteToMove
-            if self.InCheck():
-                self.moves.remove(move)
+        #for move in self.moves:
+            #self.MakeMove(move)
+            #self.whiteToMove = not self.whiteToMove
+            #if self.InCheck():
+                #self.moves.remove(move)
             
-                if "K" in self.GetPieceName(self.GetPieceLocation(self.moveLog)):
-                    validMoves.append(move)
-                    if not self.InCheck():
-                        self.moves.remove(move)
-            self.whiteToMove = not self.whiteToMove
-            self.undoMove()
+                #if "K" in self.GetPieceName(self.GetPieceLocation(self.moveLog)):
+                    #validMoves.append(move)
+                    #if not self.InCheck():
+                        #self.moves.remove(move)
+           # self.whiteToMove = not self.whiteToMove
+           # self.undoMove()
 
 
             
