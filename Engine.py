@@ -61,31 +61,10 @@ class GameState():
                     if(Move.filesToCols[move.getChessNotation()[0]] != self.blackKingLocation[1]):
                         print(Move.filesToCols[move.getChessNotation()[0]], self.blackKingLocation[0], " LOCATION")
                         validMoves.append(move)
-            
-            #while i < len(blockingMoves):
-                #validMoves.append(self.moves[i])
-                #print(self.moves[i].getChessNotation(), " MOVE VALID ADDED")
-                #i += 1
 
         else:
             validMoves = self.moves
         
-        #for move in self.moves:
-            #self.MakeMove(move)
-            #self.whiteToMove = not self.whiteToMove
-            #if self.InCheck():
-                #self.moves.remove(move)
-            
-                #if "K" in self.GetPieceName(self.GetPieceLocation(self.moveLog)):
-                    #validMoves.append(move)
-                    #if not self.InCheck():
-                        #self.moves.remove(move)
-           # self.whiteToMove = not self.whiteToMove
-           # self.undoMove()
-
-
-            
-
         return validMoves
 
 
@@ -152,7 +131,26 @@ class GameState():
                     for move in self.moves:
                         if (move.getChessNotation())[2] == newLocation[0] and (move.getChessNotation())[1] == newLocation[1]:
                             blockingMoves.append(move)
-        
+
+            if location[1] > self.whiteKingLocation[1] and location[0] > self.whiteKingLocation[0]: # X is bigger Y is smaller(bishop is on the right and above king)
+                name = self.GetPieceName(self.GetPieceLocation(newLocation))
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[0] < 8: # Check if Y is in bounds
+                        newLocation[0] += 1
+
+                    if newLocation[1] < 0:
+                        newLocation[1] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+                    
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if (move.getChessNotation())[2] == newLocation[0] and (move.getChessNotation())[1] == newLocation[1]:
+                            blockingMoves.append(move)
+                    
         else:
             if location[1] < self.blackKingLocation[1] and location[0] > self.blackKingLocation[0]: # If king is on a lower collum and higher row then bishop
                 name = self.GetPieceName(newLocation)
