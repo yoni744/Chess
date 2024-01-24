@@ -80,6 +80,12 @@ def main():
                             break
                         else:
                             playerClicks = [sqSelected]
+                    if len(validMoves) == 0: # Check if no valid moves(Can also be draw do not account for that for now)
+                        gs.checkMate = True
+                        winner = "White"
+                        if gs.whiteToMove: # If whiteToMove = True then white has no moves which means black won.
+                            winner = "Black"
+                        print(f"Check mate! {winner} Wins!")
 
         if moveMade:
             validMoves = gs.GetValidMoves()

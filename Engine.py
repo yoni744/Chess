@@ -18,6 +18,7 @@ class GameState():
         self.whiteKingLocation = (7, 4)
         self.blackKingLocation = (0, 4)
         self.moves = []
+        self.checkMate = False
 
     
     def undoMove(self):
@@ -50,12 +51,11 @@ class GameState():
         if self.InCheck():
             i = 0
             validMoves = []
-            print("In")
             location = self.GetPieceLocation(self.moveLog)
             blockingMoves = self.GetBlockingMovesBishop(location)
             for move in blockingMoves:
                 if self.whiteToMove:
-                    if (Move.filesToCols[move.getChessNotation()[0]] != self.WhiteKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
+                    if (Move.filesToCols[move.getChessNotation()[0]] != self.whiteKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
                         validMoves.append(move)
                 else:
                     if(Move.filesToCols[move.getChessNotation()[0]] != self.blackKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
@@ -113,7 +113,7 @@ class GameState():
         newLocation = location
 
         if self.whiteToMove:
-            if location[1] < self.blackKingLocation[1] and location[0] > self.blackKingLocation[0]: # If king is on a lower collum and higher row then bishop
+            if location[0] < self.whiteKingLocation[1] and location[1] > self.whiteKingLocation[0]: # If king is on a lower collum and higher row then bishop
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K": #w/b K, Only take note of the K(for king).
                     newLocation = list(newLocation)
@@ -132,8 +132,8 @@ class GameState():
                         if (move.getChessNotation())[2] == newLocation[0] and (move.getChessNotation())[1] == newLocation[1]:
                             blockingMoves.append(move)
 
-            if location[1] > self.whiteKingLocation[1] and location[0] > self.whiteKingLocation[0]: # X is bigger Y is smaller(bishop is on the right and above king)
-                name = self.GetPieceName(self.GetPieceLocation(newLocation))
+            if location[0] > self.whiteKingLocation[1] and location[1] > self.whiteKingLocation[0]: # X is bigger Y is smaller(bishop is on the right and below king)
+                name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
                     if newLocation[0] < 8: # Check if Y is in bounds
@@ -150,9 +150,68 @@ class GameState():
                     for move in self.moves:
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
+
+                
+            if location[0] > self.whiteKingLocation[1] and location[1] < self.whiteKingLocation[0]: # X is bigger Y is smaller(bishop is on the right and above king)
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[1] < 8: # Check if Y is in bounds
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+        if location[0] > self.whiteKingLocation[1] and location[1] < self.whiteKingLocation[0]: # X is bigger Y is smaller(bishop is on the right and above king) above means closer to black(In code it's switched)
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[1] < 8: # Check if Y is in bounds
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+
+        if location[0] < self.whiteKingLocation[1] and location[1] < self.whiteKingLocation[0]: # X is smaller Y is smaller(bishop is on the left and below king) above means closer to black(In code it's switched)
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[1] < 8: # Check if Y is in bounds
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
         
         else:
-            if location[1] < self.blackKingLocation[1] and location[0] > self.blackKingLocation[0]: # If king is on a lower collum and higher row then bishop
+            if location[0] < self.blackKingLocation[1] and location[1] > self.blackKingLocation[0]: # If king is on a lower collum and higher row then bishop
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K": #w/b K, Only take note of the K(for king).
                     newLocation = list(newLocation)
@@ -170,6 +229,68 @@ class GameState():
                     for move in self.moves:
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
+
+            if location[0] > self.blackKingLocation[1] and location[1] > self.blackKingLocation[0]: # X is bigger Y is bigger(bishop is on the right and below king)
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[1] < 8: # Check if Y is in bounds
+                        newLocation[1] -= 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+            
+            if location[0] > self.blackKingLocation[1] and location[1] < self.blackKingLocation[0]: # X is bigger Y is smaller(bishop is on the right and above king) above means closer to black(In code it's switched)
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[1] < 8: # Check if Y is in bounds
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+
+            if location[0] < self.blackKingLocation[1] and location[1] < self.blackKingLocation[0]: # X is smaller Y is smaller(bishop is on the left and above king) above means closer to black(In code it's switched)
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+                    if newLocation[1] < 8: # Check if Y is in bounds
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+            
+
         return blockingMoves
 
                      
