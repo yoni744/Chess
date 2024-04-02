@@ -67,7 +67,6 @@ def main():
                 if len(playerClicks) == 2:
                     move = Engine.Move(playerClicks[0], playerClicks[1], gs.board)
                     print(f"{len(validMoves)}: Len") # Debugging
-                    print(gs.whiteToMove, " True = White, False = black") # Debugging
                     for i in range(len(validMoves)):
                         print(validMoves[i].getChessNotation() + " Valid") # Debugging
                         if move.getChessNotation() in (validMoves[i].getChessNotation()):
@@ -76,7 +75,6 @@ def main():
                             sqSelected = () # reseting both vars
                             playerClicks = []
                             currentMove = move.getChessNotation()
-                            print(move.getChessNotation())
                             break
                         else:
                             playerClicks = [sqSelected]

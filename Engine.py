@@ -44,7 +44,7 @@ class GameState():
             self.blackKingLocation = (move.endRow, move.endCol)
 
 
-    def GetValidMoves(self):    # All moves, with check
+    def GetValidMoves(self):    # All moves, with check 
         self.moves = self.GetAllPossibleMoves()
         validMoves = []
 
@@ -53,21 +53,38 @@ class GameState():
             validMoves = []
             location = self.GetPieceLocation(self.moveLog)
             print(self.GetPieceName(location), " NAME LOCATION")
+            
             if self.GetPieceName(location)[1] == "B":
                 blockingMoves = self.GetBlockingMovesBishop(location)
+            
+            if self.GetPieceName(location)[1] == "R":
+                blockingMoves = self.GetBlockingMovesRook(location)
+            
+            if self.GetPieceName(location)[1] == "Q": # Queen is just Rook + Bishop.
+                blockingMoves = self.GetBlockingMovesRook(location) + self.GetBlockingMovesBishop(location)
+            
             for move in blockingMoves:
+                   
+
                 if self.whiteToMove:
                     if (Move.filesToCols[move.getChessNotation()[0]] != self.whiteKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
                         validMoves.append(move)
+
+                    # //TODO: Add Wking escape moves and capturing the cheking piece
                 else:
                     if(Move.filesToCols[move.getChessNotation()[0]] != self.blackKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
                         print(Move.filesToCols[move.getChessNotation()[0]], self.blackKingLocation[0], " LOCATION")
                         validMoves.append(move)
+                    # //TODO: Add Bking escape moves and capturing the cheking piece
 
         else:
-            validMoves = self.moves
-        
-        
+            for move in self.moves:
+                self.MakeMove(move)
+                self.whiteToMove = not self.whiteToMove
+                if not self.InCheck():
+                    validMoves.append(move) # Only add moves that do not walk into check/cause check.
+                self.whiteToMove = not self.whiteToMove
+                self.undoMove()
         return validMoves
 
 
@@ -313,9 +330,188 @@ class GameState():
         blockingMoves = []
         newLocation = location
 
+        if self.whiteToMove:
+            if location[0] > self.whiteKingLocation[1] and location[1] == self.whiteKingLocation[0]: # If rook is to the right(x > king's x) of the king
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+
+            if location[0] < self.whiteKingLocation[1] and location[1] == self.whiteKingLocation[0]: # If rook is to the left(x < king's x) of the king
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+
+            if location[0] == self.whiteKingLocation[1] and location[1] > self.whiteKingLocation[0]: # If rook is below king(y > king's y(Top of board is zero))
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+
+            if location[0] == self.whiteKingLocation[1] and location[1] > self.whiteKingLocation[0]: # If rook is above king(y < king's y(Top of board is zero))
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+            
+        else:
+            print(location, " LOCATION")
+            print(self.blackKingLocation, " BLACK KING LOCATION")
+            if location[0] > self.blackKingLocation[1] and location[1] == self.blackKingLocation[0]: # If rook is to the right(x > king's x) of the king
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+            
+
+            if location[0] < self.blackKingLocation[1] and location[1] == self.blackKingLocation[0]: # If rook is to the left(x < king's x) of the king
+                print("INNNN")
+                name = self.GetPieceLocation(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+
+            if location[0] == self.blackKingLocation[1] and location[1] < self.blackKingLocation[0]: # If rook is above king(y < king's y(Top of board is zero))
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
+
+
+            if location[0] == self.blackKingLocation[1] and location[1] > self.blackKingLocation[0]: # If rook is below king(y > king's y(Top of board is zero))
+                print("INNNN")
+                name = self.GetPieceName(newLocation)
+                while name[1] != "K":
+                    newLocation = list(newLocation)
+
+                    for move in self.moves:
+                        if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
+                            blockingMoves.append(move)
+
+                    if newLocation[1] < 8: # Check if Y is in bound
+                        newLocation[1] += 1
+
+                    if newLocation[0] > 0: # Check if X is in bounds
+                        newLocation[0] -= 1
+                    
+                    if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
+                        break
+
+                    name = self.GetPieceName(newLocation)
 
         return blockingMoves
 
+# //TODO: Add GetBlockingMoves(Pawn/Knight) You don't need queen.
                      
     def GetPawnMoves(self, r, c, moves):
         if self.whiteToMove: #White pawn moves
