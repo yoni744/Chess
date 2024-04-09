@@ -19,9 +19,13 @@ class GameState():
         self.blackKingLocation = (0, 4)
         self.moves = []
         self.checkMate = False
+        self.shortCastleRightWhite = True
+        self.longCastleRightWhite = True
+        self.shortCastleRightBlack = True
+        self.longCastleRightBlack = True
 
-    
-    def undoMove(self):
+
+    def UndoMoves(self):
         if len(self.moveLog) != 0: #make sure there is a move to undo
             move = self.moveLog.pop()
             self.board[move.startRow][move.startCol] = move.pieceMoved
@@ -31,7 +35,6 @@ class GameState():
                 self.whiteKingLocation = (move.startRow, move.startCol)
             elif(move.pieceMoved == "bK"):
                 self.blackKingLocation = (move.startRow, move.startCol)
-
 
     def MakeMove(self, move):
         self.board[move.startRow][move.startCol] = "--"
@@ -43,6 +46,88 @@ class GameState():
         elif(move.pieceMoved == "bK"):
             self.blackKingLocation = (move.endRow, move.endCol)
 
+    def CastleRights(self):
+        validMoves = []
+
+        if self.whiteToMove:
+            for move in self.moveLog:
+                if self.GetPieceName(self.GetPieceLocation(self.moveLog))[1] == "K": # If the king moved 
+                    self.shortCastleRightWhite = False
+                    self.longCastleRightWhite = False
+                
+                if "h1" in ((move.getChessNotation()[0], move.getChessNotation()[1])): # Check which rook moved
+                    self.shortCastleRightWhite = False
+
+                if "a1" in ((move.getChessNotation()[0], move.getChessNotation()[1])):
+                    self.longCastleRightWhite = False
+            
+            if self.shortCastleRightWhite == True:
+                if self.board[7][5] != "--": # Check there are no pieces between king and rook
+                    self.shortCastleRightWhite = False
+        
+                if self.board[7][6] != "--": # Check there are no pieces between king and rook
+                    self.shortCastleRightWhite = False
+
+            if self.longCastleRightWhite == True:
+                if self.board[7][3] != "--":
+                    self.longCastleRightWhite = False
+                
+                if self.board[7][2] != "--":
+                    self.longCastleRightWhite = False
+                
+                if self.board[7][1] != "--":
+                    self.longCastleRightWhite = False
+            
+            if self.shortCastleRightWhite == True:
+                validMoves.append("wO-O")
+                print("wO-O")
+            
+            if self.longCastleRightWhite == True:
+                validMoves.append("wO-O-O")
+                print("wO-O-O")
+
+        else:
+            for move in self.moveLog:
+                if self.GetPieceName(self.GetPieceLocation(self.moveLog))[1] == "K":
+                    self.shortCastleRightBlack = False
+                    self.longCastleRightBlack = False
+                
+                if "h1" in ((move.getChessNotation()[0], move.getChessNotation()[1])):
+                    self.shortCastleRightBlack = False
+                
+                if "a1" in ((move.getChessNotation()[0], move.getChessNotation()[1])):
+                    self.longCastleRightBlack = False
+            
+            if self.shortCastleRightBlack == True:
+                if self.board[0][5] != "--": # Check there are no pieces between king and rook
+                    self.shortCastleRightBlack = False
+
+                if self.board[0][6] != "--": # Check there are no pieces between king and rook
+                    self.shortCastleRightBlack = False
+            
+            if self.longCastleRightBlack == True:
+                if self.board[0][3] != "--": # Check there are no pieces between king and rook
+                    self.longCastleRightBlack = False
+
+                if self.board[0][2] != "--": # Check there are no pieces between king and rook
+                    self.longCastleRightBlack = False
+
+                if self.board[0][1] != "--": # Check there are no pieces between king and rook
+                    self.longCastleRightBlack = False
+            
+            if self.shortCastleRightBlack == True:
+                validMoves.append("bO-O")
+                print("bO-O")
+            
+            if self.longCastleRightBlack == True:
+                validMoves.append("bO-O-O")
+                print("bO-O-O")
+
+        self.shortCastleRightWhite = True
+        self.longCastleRightWhite = True
+        self.shortCastleRightBlack = True
+        self.longCastleRightBlack = True
+        return validMoves
 
     def GetValidMoves(self):    # All moves, with check 
         self.moves = self.GetAllPossibleMoves()
@@ -52,7 +137,6 @@ class GameState():
             i = 0
             validMoves = []
             location = self.GetPieceLocation(self.moveLog)
-            print(self.GetPieceName(location), " NAME LOCATION")
             
             if self.GetPieceName(location)[1] == "B":
                 blockingMoves = self.GetBlockingMovesBishop(location)
@@ -63,31 +147,48 @@ class GameState():
             if self.GetPieceName(location)[1] == "Q": # Queen is just Rook + Bishop.
                 blockingMoves = self.GetBlockingMovesRook(location) + self.GetBlockingMovesBishop(location)
             
-            for move in blockingMoves:
-                   
+            if self.GetPieceName(location)[1] == "N": #Knight is N
+                blockingMoves = self.GetBlockingMovesKnight(location)
 
+
+            for move in self.moves: # For every possible move make it, then check if you're in check
+                self.MakeMove(move)
+                self.whiteToMove = not self.whiteToMove
+                if not self.InCheck():
+                   validMoves.append(move) # Only add moves that do not walk into/cause check.
+                self.whiteToMove = not self.whiteToMove
+                self.UndoMoves()
+
+
+            for move in blockingMoves:
                 if self.whiteToMove:
                     if (Move.filesToCols[move.getChessNotation()[0]] != self.whiteKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
                         validMoves.append(move)
 
-                    # //TODO: Add Wking escape moves and capturing the cheking piece
                 else:
                     if(Move.filesToCols[move.getChessNotation()[0]] != self.blackKingLocation[1]): # Check if BlockingMoves doesn't contain king moves(can't block with the king)
-                        print(Move.filesToCols[move.getChessNotation()[0]], self.blackKingLocation[0], " LOCATION")
                         validMoves.append(move)
-                    # //TODO: Add Bking escape moves and capturing the cheking piece
-
+                       
         else:
-            for move in self.moves:
+            for move in self.moves: # For every possible move make it, then check if you're in check
                 self.MakeMove(move)
                 self.whiteToMove = not self.whiteToMove
                 if not self.InCheck():
                     validMoves.append(move) # Only add moves that do not walk into check/cause check.
                 self.whiteToMove = not self.whiteToMove
-                self.undoMove()
+                self.UndoMoves()
+
+        if self.CastleRights() != None:
+            for move in self.CastleRights():
+                validMoves.append(move)
+
+        print(self.shortCastleRightWhite, " W SHORT")
+        print(self.longCastleRightWhite, " W LONG")
+        print(self.shortCastleRightBlack, " B SSHORT")
+        print(self.longCastleRightBlack, " B LONG")
+
+        
         return validMoves
-
-
 
     def GetAllPossibleMoves(self):    #All possible moves
         moves = []
@@ -99,13 +200,10 @@ class GameState():
                     self.moveFunctions[piece](r, c, moves)
         return moves
 
-
-
     def InCheck(self):
         if self.whiteToMove:
             return self.SquareUnderAttack(self.whiteKingLocation[0], self.whiteKingLocation[1])
         return self.SquareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])
-
 
     def SquareUnderAttack(self, r, c):
         self.whiteToMove = not self.whiteToMove
@@ -113,17 +211,14 @@ class GameState():
         self.whiteToMove = not self.whiteToMove
         for move in oppMoves:
             if move.endRow == r and move.endCol == c:
-                return True
+                    return True
         return False
-
 
     def GetPieceName(self, location):
         return self.board[location[1]][location[0]]
 
     def GetPieceLocation(self, movelog):
         log = movelog.copy()
-        for move in log:
-            print(move.getChessNotation())
         loc = log.pop().getChessNotation()
         return ((Move.filesToCols[loc[2]], Move.rankToRows[loc[3]]))
 
@@ -325,14 +420,11 @@ class GameState():
                     name = self.GetPieceName(newLocation)
         return blockingMoves
 
-
-    def GetBlockingMovesRook(self, location):
+    def GetBlockingMovesRook(self, location): 
         blockingMoves = []
         newLocation = location
-
         if self.whiteToMove:
             if location[0] > self.whiteKingLocation[1] and location[1] == self.whiteKingLocation[0]: # If rook is to the right(x > king's x) of the king
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -340,9 +432,6 @@ class GameState():
                     for move in self.moves:
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
-
-                    if newLocation[1] < 8: # Check if Y is in bound
-                        newLocation[1] += 1
 
                     if newLocation[0] > 0: # Check if X is in bounds
                         newLocation[0] -= 1
@@ -354,7 +443,6 @@ class GameState():
 
 
             if location[0] < self.whiteKingLocation[1] and location[1] == self.whiteKingLocation[0]: # If rook is to the left(x < king's x) of the king
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -363,11 +451,8 @@ class GameState():
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
 
-                    if newLocation[1] < 8: # Check if Y is in bound
-                        newLocation[1] += 1
-
-                    if newLocation[0] > 0: # Check if X is in bounds
-                        newLocation[0] -= 1
+                    if newLocation[0] < 8: # Check if X is in bounds
+                        newLocation[0] += 1
                     
                     if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
                         break
@@ -376,7 +461,6 @@ class GameState():
 
 
             if location[0] == self.whiteKingLocation[1] and location[1] > self.whiteKingLocation[0]: # If rook is below king(y > king's y(Top of board is zero))
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -388,8 +472,6 @@ class GameState():
                     if newLocation[1] < 8: # Check if Y is in bound
                         newLocation[1] += 1
 
-                    if newLocation[0] > 0: # Check if X is in bounds
-                        newLocation[0] -= 1
                     
                     if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
                         break
@@ -398,7 +480,6 @@ class GameState():
 
 
             if location[0] == self.whiteKingLocation[1] and location[1] > self.whiteKingLocation[0]: # If rook is above king(y < king's y(Top of board is zero))
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -407,12 +488,9 @@ class GameState():
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
 
-                    if newLocation[1] < 8: # Check if Y is in bound
-                        newLocation[1] += 1
+                    if newLocation[1] > 0: # Check if Y is in bound
+                        newLocation[1] -= 1
 
-                    if newLocation[0] > 0: # Check if X is in bounds
-                        newLocation[0] -= 1
-                    
                     if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
                         break
 
@@ -420,10 +498,7 @@ class GameState():
 
             
         else:
-            print(location, " LOCATION")
-            print(self.blackKingLocation, " BLACK KING LOCATION")
             if location[0] > self.blackKingLocation[1] and location[1] == self.blackKingLocation[0]: # If rook is to the right(x > king's x) of the king
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -431,9 +506,6 @@ class GameState():
                     for move in self.moves:
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
-
-                    if newLocation[1] < 8: # Check if Y is in bound
-                        newLocation[1] += 1
 
                     if newLocation[0] > 0: # Check if X is in bounds
                         newLocation[0] -= 1
@@ -445,7 +517,6 @@ class GameState():
             
 
             if location[0] < self.blackKingLocation[1] and location[1] == self.blackKingLocation[0]: # If rook is to the left(x < king's x) of the king
-                print("INNNN")
                 name = self.GetPieceLocation(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -454,11 +525,8 @@ class GameState():
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
 
-                    if newLocation[1] < 8: # Check if Y is in bound
-                        newLocation[1] += 1
-
-                    if newLocation[0] > 0: # Check if X is in bounds
-                        newLocation[0] -= 1
+                    if newLocation[0] > 8: # Check if X is in bounds
+                        newLocation[0] += 1
                     
                     if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
                         break
@@ -467,7 +535,6 @@ class GameState():
 
 
             if location[0] == self.blackKingLocation[1] and location[1] < self.blackKingLocation[0]: # If rook is above king(y < king's y(Top of board is zero))
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -478,9 +545,6 @@ class GameState():
 
                     if newLocation[1] < 8: # Check if Y is in bound
                         newLocation[1] += 1
-
-                    if newLocation[0] > 0: # Check if X is in bounds
-                        newLocation[0] -= 1
                     
                     if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
                         break
@@ -489,7 +553,6 @@ class GameState():
 
 
             if location[0] == self.blackKingLocation[1] and location[1] > self.blackKingLocation[0]: # If rook is below king(y > king's y(Top of board is zero))
-                print("INNNN")
                 name = self.GetPieceName(newLocation)
                 while name[1] != "K":
                     newLocation = list(newLocation)
@@ -498,11 +561,8 @@ class GameState():
                         if move.endRow == newLocation[1] and move.endCol == newLocation[0]:
                             blockingMoves.append(move)
 
-                    if newLocation[1] < 8: # Check if Y is in bound
+                    if newLocation[1] < 0: # Check if Y is in bound
                         newLocation[1] += 1
-
-                    if newLocation[0] > 0: # Check if X is in bounds
-                        newLocation[0] -= 1
                     
                     if not (0 <= newLocation[0] < 8 and 0 <= newLocation[1] < 8):
                         break
@@ -511,88 +571,102 @@ class GameState():
 
         return blockingMoves
 
-# //TODO: Add GetBlockingMoves(Pawn/Knight) You don't need queen.
+    def GetBlockingMovesKnight(self, location): # Not really GetBlockingMoves because you can't block a knight... 
+        blockingMoves = []
+        
+        for move in self.moves:
+            if move.endRow == location[1] and move.endCol == location[0]: # If a piece can capture the checking knight add it to blockingMoves.
+                blockingMoves.append(move)
+        
+        return blockingMoves
+
+    def GetBlockingMovesPawn(self, location): # Not really GetBlockingMoves because you can't block a pawn... 
+        blockingMoves = []
+        
+        for move in self.moves: 
+            if move.endRow == location[1] and move.endCol == location[0]: # If a piece can capture the checking pawn add it to blockingMoves.
+                blockingMoves.append(move)
+        
+        return blockingMoves
                      
     def GetPawnMoves(self, r, c, moves):
-        if self.whiteToMove: #White pawn moves
-            if self.board[r - 1][c] == "--": # 1 sq pawn move
-                moves.append(Move((r, c), (r - 1, c), self.board))
-                if r == 6 and self.board[r - 2][c] == "--":# 2 sq pawn move
-                    moves.append(Move((r, c), (r - 2, c), self.board))
-            if c - 1 >= 0: # Capture to the left
-                if self.board[r - 1][c - 1][0] == "b": # enemey piece to capture
-                    moves.append(Move((r, c), (r - 1, c - 1), self.board))
-            if c + 1 <= 7: # Capture to the right
-                if self.board[r - 1][c + 1][0] == "b":
-                    moves.append(Move((r, c), (r - 1, c + 1), self.board))
-        
-        else: # black pawn moves
-            if self.board[r + 1][c] == "--": # 1 sq pawn move
-                moves.append(Move((r, c), (r + 1, c), self.board))
-                if r == 1 and self.board[r + 2][c] == "--":# 2 sq pawn move
-                    moves.append(Move((r, c), (r + 2, c), self.board))
-            if c - 1 >= 0: # Capture to the left
-                if self.board[r + 1][c - 1][0] == "w": # enemey piece to capture
-                    moves.append(Move((r, c), (r + 1, c - 1), self.board))
-            if c + 1 <= 7: # Capture to the right
-                if self.board[r + 1][c + 1][0] == "w":
-                    moves.append(Move((r, c), (r + 1, c + 1), self.board))
-
+        if self.whiteToMove: # White pawn moves
+            if self.board[r-1][c] == "--": # Single square move
+                moves.append(Move((r, c), (r-1, c), self.board))
+                if r == 6 and self.board[r-2][c] == "--": # Double square move
+                    moves.append(Move((r, c), (r-2, c), self.board))
+            # Captures
+            if c-1 >= 0: # Capture to the left
+                if self.board[r-1][c-1][0] == 'b': # There's a black piece to capture
+                    moves.append(Move((r, c), (r-1, c-1), self.board))
+            if c+1 <= 7: # Capture to the right
+                if self.board[r-1][c+1][0] == 'b': # There's a black piece to capture
+                    moves.append(Move((r, c), (r-1, c+1), self.board))
+        else: # Black pawn moves
+            if self.board[r+1][c] == "--": # Single square move
+                moves.append(Move((r, c), (r+1, c), self.board))
+                if r == 1 and self.board[r+2][c] == "--": # Double square move
+                    moves.append(Move((r, c), (r+2, c), self.board))
+            # Captures
+            if c-1 >= 0: # Capture to the left
+                if self.board[r+1][c-1][0] == 'w': # There's a white piece to capture
+                    moves.append(Move((r, c), (r+1, c-1), self.board))
+            if c+1 <= 7: # Capture to the right
+                if self.board[r+1][c+1][0] == 'w': # There's a white piece to capture
+                    moves.append(Move((r, c), (r+1, c+1), self.board))
 
     def GetRookMoves(self, r, c, moves):
-        directions = ((-1, 0), (0, -1), (1, 0), (0, 1)) # Up, left, down, right
-        enemyColor = "b" if self.whiteToMove else "w"
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Up, down, left, right
+        enemy_color = "b" if self.whiteToMove else "w"
         for d in directions:
             for i in range(1, 8):
                 endRow = r + d[0] * i
                 endCol = c + d[1] * i
-                if 0 <= endRow < 8 and 0 <= endCol < 8:
+                if 0 <= endRow < 8 and 0 <= endCol < 8: # Check board bounds
                     endPiece = self.board[endRow][endCol]
-                    if endPiece == "--": # no piece
+                    if endPiece == "--": # Empty space
                         moves.append(Move((r, c), (endRow, endCol), self.board))
-                    elif endPiece[0] == enemyColor: # enemy piece
+                    elif endPiece[0] == enemy_color: # Capture enemy piece
                         moves.append(Move((r, c), (endRow, endCol), self.board))
-                    else: # same color piece
-                        break 
-                else: # off board
+                        break # Stop checking further in this direction
+                    else: # Friendly piece or king
+                        break
+                else: # Off the board
                     break
 
-
     def GetKnightMoves(self, r, c, moves):
-        knightMoves = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1))
-        allayColor = "w" if self.whiteToMove else "b"
+        knightMoves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+        ally_color = "w" if self.whiteToMove else "b"
         for m in knightMoves:
             endRow = r + m[0]
             endCol = c + m[1]
-            if 0 <= endRow < 8 and 0 <= endCol < 8:
+            if 0 <= endRow < 8 and 0 <= endCol < 8: # Stay on board
                 endPiece = self.board[endRow][endCol]
-                if endPiece[0] != allayColor:
+                if endPiece[0] != ally_color: # Empty or enemy piece
                     moves.append(Move((r, c), (endRow, endCol), self.board))
 
-
     def GetBishopMoves(self, r, c, moves):
-        directions = ((1, 1), (1, -1), (-1, -1), (-1, 1))
-        enemyColor = "b" if self.whiteToMove else "w"
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)] # Four diagonals
+        enemy_color = "b" if self.whiteToMove else "w"
         for d in directions:
-            for i in range(1, 8):
+            for i in range(1, 8): # Bishop can move up to 7 squares
                 endRow = r + d[0] * i
                 endCol = c + d[1] * i
-                if 0 <= endRow < 8 and 0 <= endCol < 8:
+                if 0 <= endRow < 8 and 0 <= endCol < 8: # Check board bounds
                     endPiece = self.board[endRow][endCol]
-                    if endPiece == "--": # no piece
+                    if endPiece == "--": # Empty space
                         moves.append(Move((r, c), (endRow, endCol), self.board))
-                    elif endPiece[0] == enemyColor:
+                    elif endPiece[0] == enemy_color: # Capture enemy piece
                         moves.append(Move((r, c), (endRow, endCol), self.board))
-                    else: # same color piece
-                        break 
-                else: # off board
+                        break # Stop checking further in this direction
+                    else: # Friendly piece blocks the path
+                        break
+                else: # Off the board
                     break
-
 
     def GetQueenMoves(self, r, c, moves):
         self.GetRookMoves(r, c, moves)
         self.GetBishopMoves(r, c, moves)
-
 
     def GetKingMoves(self, r, c, moves):
         kingMoves = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, -1))
@@ -604,8 +678,6 @@ class GameState():
                     endPiece = self.board[endRow][endCol]
                     if endPiece[0] != allyColor:
                         moves.append(Move((r, c), (endRow, endCol), self.board))
-
-
 
 
 class Move():

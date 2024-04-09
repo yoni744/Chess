@@ -1,4 +1,4 @@
-import pygame as p
+import pygame as p 
 import Engine
 
 WIDTH = HEIGHT = 512
@@ -47,6 +47,7 @@ def main():
     playerClicks = []
     moveMade = False
     running = True
+
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
@@ -68,13 +69,47 @@ def main():
                     move = Engine.Move(playerClicks[0], playerClicks[1], gs.board)
                     print(f"{len(validMoves)}: Len") # Debugging
                     for i in range(len(validMoves)):
-                        print(validMoves[i].getChessNotation() + " Valid") # Debugging
+                        #print(validMoves[i].getChessNotation() + " Valid") # Debugging
+                        string = str(validMoves[i])
+                        if "O-O" in string: # Casteling.
+                            if "w" in string: # If white can castle
+                                if string == "wO-O": # If its short castle
+                                    moveMade = move
+                                    gs.board[7][4] = "--"
+                                    gs.board[7][5] = "wR"
+                                    gs.board[7][6] = "wK"
+                                    gs.board[7][7] = "--"
+
+                                if string == "wO-O-O": # If its long castle
+                                    moveMade = move
+                                    gs.board[7][4] = "--"
+                                    gs.board[7][3] = "wR"
+                                    gs.board[7][2] = "wK"
+                                    gs.board[7][1] = "--"
+                                    gs.board[7][0] = "--"
+                            else:
+                                if string == "bO-O": # Short for black
+                                    moveMade = move
+                                    gs.board[0][4] = "--"
+                                    gs.board[0][5] = "wR"
+                                    gs.board[0][6] = "wK"
+                                    gs.board[0][7] = "--"
+
+                                if string == "bO-O-O": # Long for black
+                                    moveMade = move
+                                    gs.board[0][4] = "--"
+                                    gs.board[0][3] = "wR"
+                                    gs.board[0][2] = "wK"
+                                    gs.board[0][1] = "--"
+                                    gs.board[0][0] = "--"
+                            break
+
+
                         if move.getChessNotation() in (validMoves[i].getChessNotation()):
                             gs.MakeMove(move)
-                            moveMade = True
+                            moveMade = move
                             sqSelected = () # reseting both vars
                             playerClicks = []
-                            currentMove = move.getChessNotation()
                             break
                         else:
                             playerClicks = [sqSelected]
@@ -85,9 +120,20 @@ def main():
                             winner = "Black"
                         print(f"Check mate! {winner} Wins!")
 
-        if moveMade:
+
+        if moveMade != False and "O-O" not in str(moveMade): # Promotion.
+            validMoves = gs.GetValidMoves()
+            location = ((Engine.Move.filesToCols[Engine.Move.getChessNotation(moveMade)[2]]), int(Engine.Move.getChessNotation(moveMade)[3]))
+            if location[1] == 8: # Top of gs.board is zero bottom is eight.
+                location = ((location[0], 0))
+            if gs.GetPieceName(list(location))[1] == "p" and location[1] == 0: # If it's a pawn and it's at the top(y = 0)
+                gs.board[location[1]][location[0]] = (f"{gs.board[location[1]][location[0]][0]}Q") # Make it a queen
+            moveMade = False
+        
+        if "O-O" in str(moveMade):
             validMoves = gs.GetValidMoves()
             moveMade = False
+
                     
         DrawGameState(screen, gs)
         clock.tick(MAX_FPS)
