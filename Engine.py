@@ -1,3 +1,13 @@
+import socket
+import random
+import pickle
+import queue
+import tkinter as tk
+from tkinter import simpledialog
+from threading import Thread, Event
+import ChessMain
+import time
+
 class GameState():
     def __init__(self):
         self.board = [
@@ -19,11 +29,24 @@ class GameState():
         self.blackKingLocation = (0, 4)
         self.moves = []
         self.checkMate = False
+        self.Draw = False
         self.shortCastleRightWhite = True
         self.longCastleRightWhite = True
         self.shortCastleRightBlack = True
         self.longCastleRightBlack = True
+        self.CastleFlag = False # A flag to know when you castled.
+        self.promotionFlag = False # A flag to know when you promoted
+        self.server = True # If you will be a server it will be True, client is false. Server is always white.
 
+    """ //TODO: Make the chess multiplayer(plan).
+    1. Only genrate moves for you color, if server generate only for white. If client only for black. - DONE
+
+    2. After each move send self.board over to other player(Client to server, server to client.). - WIP
+
+    3. Add login and create an acount screen.
+
+    4. If you have extra time, create a movelog screen and make everything more optimized. 
+    """
 
     def UndoMoves(self):
         if len(self.moveLog) != 0: #make sure there is a move to undo
@@ -129,26 +152,44 @@ class GameState():
         self.longCastleRightBlack = True
         return validMoves
 
+    def CastleCheck(self, rookLocation): # To make sure you can't castle into check
+        if self.CastleFlag == True:
+            if self.InCheck() or self.SquareUnderAttack(rookLocation[0], rookLocation[1]): # if an opp piece threatens rook/king after castle, make sure you won't be able to.
+                self.CastleFlag = False
+        return self.CastleFlag
+
+    def PromotionCheck(self): # To make sure a promotion move counts as a check.
+        validMoves = []
+        if self.promotionFlag == True:
+            print(self.whiteToMove, " WHITE TO MOVE")
+            validMoves = self.GetValidMoves()
+            self.promotionFlag = False
+            return validMoves
+
     def GetValidMoves(self):    # All moves, with check 
         self.moves = self.GetAllPossibleMoves()
         validMoves = []
+        # //TODO: Fix check after promotion
 
         if self.InCheck():
             i = 0
             validMoves = []
             location = self.GetPieceLocation(self.moveLog)
             
-            if self.GetPieceName(location)[1] == "B":
+            if self.GetPieceName(location)[1] == "B": # Bishop is B
                 blockingMoves = self.GetBlockingMovesBishop(location)
             
-            if self.GetPieceName(location)[1] == "R":
+            if self.GetPieceName(location)[1] == "R": # Rook is R
                 blockingMoves = self.GetBlockingMovesRook(location)
             
-            if self.GetPieceName(location)[1] == "Q": # Queen is just Rook + Bishop.
+            if self.GetPieceName(location)[1] == "Q" or self.promotionFlag == True: # Queen is just Rook + Bishop.
                 blockingMoves = self.GetBlockingMovesRook(location) + self.GetBlockingMovesBishop(location)
             
             if self.GetPieceName(location)[1] == "N": #Knight is N
                 blockingMoves = self.GetBlockingMovesKnight(location)
+            
+            if self.GetPieceName(location)[1] == "p": # pawn in p
+                blockingMoves = self.GetBlockingMovesPawn(location)
 
 
             for move in self.moves: # For every possible move make it, then check if you're in check
@@ -158,7 +199,6 @@ class GameState():
                    validMoves.append(move) # Only add moves that do not walk into/cause check.
                 self.whiteToMove = not self.whiteToMove
                 self.UndoMoves()
-
 
             for move in blockingMoves:
                 if self.whiteToMove:
@@ -178,15 +218,8 @@ class GameState():
                 self.whiteToMove = not self.whiteToMove
                 self.UndoMoves()
 
-        if self.CastleRights() != None:
-            for move in self.CastleRights():
-                validMoves.append(move)
-
-        print(self.shortCastleRightWhite, " W SHORT")
-        print(self.longCastleRightWhite, " W LONG")
-        print(self.shortCastleRightBlack, " B SSHORT")
-        print(self.longCastleRightBlack, " B LONG")
-
+        for move in self.CastleRights(): # Add legal castle moves
+            validMoves.append(move)
         
         return validMoves
 
@@ -204,6 +237,11 @@ class GameState():
         if self.whiteToMove:
             return self.SquareUnderAttack(self.whiteKingLocation[0], self.whiteKingLocation[1])
         return self.SquareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])
+
+    def checkForStalemate(self):
+        if not self.GetValidMoves() and not self.InCheck():
+            return True
+        return False
 
     def SquareUnderAttack(self, r, c):
         self.whiteToMove = not self.whiteToMove
@@ -590,30 +628,32 @@ class GameState():
         return blockingMoves
                      
     def GetPawnMoves(self, r, c, moves):
-        if self.whiteToMove: # White pawn moves
-            if self.board[r-1][c] == "--": # Single square move
-                moves.append(Move((r, c), (r-1, c), self.board))
-                if r == 6 and self.board[r-2][c] == "--": # Double square move
-                    moves.append(Move((r, c), (r-2, c), self.board))
-            # Captures
-            if c-1 >= 0: # Capture to the left
-                if self.board[r-1][c-1][0] == 'b': # There's a black piece to capture
-                    moves.append(Move((r, c), (r-1, c-1), self.board))
-            if c+1 <= 7: # Capture to the right
-                if self.board[r-1][c+1][0] == 'b': # There's a black piece to capture
-                    moves.append(Move((r, c), (r-1, c+1), self.board))
-        else: # Black pawn moves
-            if self.board[r+1][c] == "--": # Single square move
-                moves.append(Move((r, c), (r+1, c), self.board))
-                if r == 1 and self.board[r+2][c] == "--": # Double square move
-                    moves.append(Move((r, c), (r+2, c), self.board))
-            # Captures
-            if c-1 >= 0: # Capture to the left
-                if self.board[r+1][c-1][0] == 'w': # There's a white piece to capture
-                    moves.append(Move((r, c), (r+1, c-1), self.board))
-            if c+1 <= 7: # Capture to the right
-                if self.board[r+1][c+1][0] == 'w': # There's a white piece to capture
-                    moves.append(Move((r, c), (r+1, c+1), self.board))
+        if self.whiteToMove:  # White pawn moves
+            if r > 0:  # Prevent moving off the board
+                if self.board[r-1][c] == "--":  # Single square move
+                    moves.append(Move((r, c), (r-1, c), self.board))
+                    if r == 6 and self.board[r-2][c] == "--":  # Double square move
+                        moves.append(Move((r, c), (r-2, c), self.board))
+                # Captures
+                if c-1 >= 0:  # Capture to the left
+                    if self.board[r-1][c-1][0] == 'b':  # There's a black piece to capture
+                        moves.append(Move((r, c), (r-1, c-1), self.board))
+                if c+1 <= 7:  # Capture to the right
+                    if self.board[r-1][c+1][0] == 'b':  # There's a black piece to capture
+                        moves.append(Move((r, c), (r-1, c+1), self.board))
+        else:  # Black pawn moves
+            if r < 7:  # Prevent moving off the board
+                if self.board[r+1][c] == "--":  # Single square move
+                    moves.append(Move((r, c), (r+1, c), self.board))
+                    if r == 1 and self.board[r+2][c] == "--":  # Double square move
+                        moves.append(Move((r, c), (r+2, c), self.board))
+                # Captures
+                if c-1 >= 0:  # Capture to the left
+                    if self.board[r+1][c-1][0] == 'w':  # There's a white piece to capture
+                        moves.append(Move((r, c), (r+1, c-1), self.board))
+                if c+1 <= 7:  # Capture to the right
+                    if self.board[r+1][c+1][0] == 'w':  # There's a white piece to capture
+                        moves.append(Move((r, c), (r+1, c+1), self.board))
 
     def GetRookMoves(self, r, c, moves):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Up, down, left, right
@@ -679,6 +719,51 @@ class GameState():
                     if endPiece[0] != allyColor:
                         moves.append(Move((r, c), (endRow, endCol), self.board))
 
+isServer = None
+client_socket = None
+server_socket = None
+current_board = GameState().board
+whiteToMove = True
+
+def set_server_state(server):
+    global isServer
+    isServer = server
+
+def get_server_state():
+    global isServer
+    return isServer
+
+def set_client_socket(socket):
+    global client_socket
+    client_socket = socket
+
+def get_client_socket():
+    global client_socket
+    return client_socket
+
+def set_server_socket(socket):
+    global server_socket
+    server_socket = socket
+
+def get_server_socket():
+    global server_socket
+    return server_socket
+
+def set_current_board(board):
+    global current_board
+    current_board = board
+
+def get_current_board():
+    global current_board
+    return current_board
+
+def set_whiteToMove(turn):
+    global whiteToMove
+    whiteToMove = turn
+
+def get_whiteToMove():
+    global whiteToMove
+    return whiteToMove
 
 class Move():
     rankToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
@@ -697,16 +782,181 @@ class Move():
         self.pieceCaptured = board[self.endRow][self.endCol]
         self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol #Creating a uniqe move ID for every move 1,1 to 1,2 = 1112
 
-
         # Overriding the equals method
         def __eq__(self, other):
             if isinstance(other, Move):
                 return self.moveID == other.moveID
             return False
-
-    
+                
     def getChessNotation(self):
         return self.GetRankFile(self.startRow, self.startCol) + self.GetRankFile(self.endRow, self.endCol)
 
     def GetRankFile(self, r, c):
         return self.colsToFiles[c] + self.rowsToRanks[r]
+
+# //TODO: Find a way to send who's turn it is
+class Communication:
+    def __init__(self):
+        self.gui_queue = queue.Queue()  # Queue for GUI updates
+        self.connection_established = Event()  # Event to signal successful connection
+        self.recive_flag = False # A flag to know when you recived data
+        self.MAX_RECONNECT_ATTEMPTS = 5
+        self.RECONNECT_INTERVAL = 5
+
+    def create_display_window(self, host, port, close_event):
+        # Initialize the window once outside the loop
+        window = tk.Tk()
+        window.title("Server Information")
+        window.geometry("300x100")
+
+        host_var = tk.StringVar(value=f"Host: {host}")
+        port_var = tk.StringVar(value=f"Port: {port}")
+        tk.Label(window, textvariable=host_var).pack()
+        tk.Label(window, textvariable=port_var).pack()
+
+        def update_gui():
+            # Handle GUI updates within a try-except inside the loop
+            try:
+                func, args = self.gui_queue.get_nowait()
+                func(*args)
+                self.gui_queue.task_done()
+            except queue.Empty:
+                pass
+            if not close_event.is_set():
+                window.after(100, update_gui)  # Continue updating if close_event is not set
+
+        def check_close_event():
+            if close_event.is_set():
+                window.destroy()  # Close the window if close_event is set
+            else:
+                window.after(100, check_close_event)  # Continue checking close_event
+
+        window.after(100, update_gui)
+        window.after(100, check_close_event)
+        window.mainloop()
+
+    def start_server(self, port=6752):
+        set_server_state(True)
+        host_ip = self.get_host_ip()
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        set_server_socket(server_socket)
+
+        while True:
+            try:
+                server_socket.bind((host_ip, port))
+                print(f"Server successfully bound to {host_ip}:{port}")
+                break
+            except OSError:
+                print(f"Failed to bind to {host_ip}:{port}, trying a new port...")
+                port = random.randint(1000, 9999)
+
+        close_event = Event()
+        gui_thread = Thread(target=self.create_display_window, args=(host_ip, port, close_event))
+        gui_thread.start()
+        
+        server_socket.listen(1)
+        print(f"Server listening on {host_ip}:{port}")
+        print(server_socket, " 0")
+
+        try:
+            client_socket, addr = server_socket.accept()
+            set_client_socket(client_socket)
+            print(f"Received connection from {addr}")
+            self.connection_established.set()
+        except socket.error as e:
+            if e.args[0] == socket.errno.EAGAIN or e.args[0] == socket.errno.EWOULDBLOCK:
+                print("No connections are available to be accepted")
+                print("Error: ", e)
+            else:
+                raise
+        
+        close_event.set()
+        gui_thread.join()
+        while True:
+            game_board = GameState().board
+            data = pickle.dumps(game_board)
+            client_socket.send(data)
+    
+            data = client_socket.recv(1024)
+            if not data:
+                print("Client disconnected.")
+                self.recive_flag = False
+                break
+            set_current_board(pickle.loads(data))
+            self.recive_flag = True
+            
+
+        client_socket.close()
+        server_socket.close()
+
+    def start_client(self, host, port):
+        set_server_state(False)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((host, port))
+        set_client_socket(client_socket)
+        print("Connected to server at {}:{}".format(host, port))
+        self.connection_established.set()
+
+        try:
+            while True:
+                data = client_socket.recv(1024)
+                if not data:
+                    print("Server disconnected.")
+                    self.recive_flag = False
+                    break
+                set_current_board(pickle.loads(data))
+                self.recive_flag = True
+
+        finally:
+            client_socket.close()
+        return client_socket
+
+    def get_host_ip(self):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect(("8.8.8.8", 80))
+                IP = s.getsockname()[0]
+        except Exception:
+            IP = '127.0.0.1'
+        return IP
+    
+    def SendMessage(self, socket, board, addr):
+        print(f"{socket}: SOCKET SEND")
+        print(addr, " ADDRESS 2")
+        if not socket:
+            print(f"No socket. {socket}")
+            return
+        game_board = board
+        set_current_board(board)
+        data = pickle.dumps(game_board)
+        try:
+            socket.send(data)
+            print(game_board, " SENT DATA")
+        except Exception as e:
+            print(f"Failed to send data: {e}")
+            print(f"More details: {e.args}")
+
+    def setup_network_mode(self):
+        root = tk.Tk()
+        root.title("Choose Mode")
+        root.geometry("200x100")
+
+        def server():
+            root.withdraw()  # Hide the window
+            thread = Thread(target=self.start_server)
+            thread.start()
+            root.destroy()  # Destroy the window after starting the thread
+
+        def client():
+            root.withdraw()  # Hide the window
+            host = simpledialog.askstring("Connect to Server", "Enter the host IP:", parent=root)
+            port = simpledialog.askinteger("Connect to Server", "Enter the port:", parent=root)
+            if host and port:
+                thread = Thread(target=self.start_client, args=(host, port))
+                thread.start()
+            root.destroy()  # Destroy the window after starting the thread
+
+        tk.Button(root, text="Server", command=server).pack(fill=tk.X)
+        tk.Button(root, text="Client", command=client).pack(fill=tk.X)
+        root.mainloop()
