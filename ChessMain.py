@@ -46,6 +46,9 @@ def main():
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
     gs = Engine.GameState()
+    playerOne = Engine.get_server_state() # If server is playing white this will be True. else, False
+    if not playerOne:
+        gs.whiteToMove = not gs.whiteToMove
     validMoves = gs.GetValidMoves()
     LoadImages() # Only doing this once.
     sqSelected = ()
@@ -57,7 +60,6 @@ def main():
     longWhiteCastle = [(7, 4), (7, 1)]
     shortBlackCastle = [(0, 4), (0, 7)]
     longBlackCastle = [(0, 4), (0, 1)]
-    playerOne = Engine.get_server_state() # If server is playing white this will be True. else, False
     print(playerOne, " PlayerOne")
     client_socket = Engine.get_client_socket()
     server_socket = Engine.get_server_socket()
@@ -65,9 +67,6 @@ def main():
     print(server_socket, " SERVER")
 
     while running:
-        if comms.recive_flag == True:
-            gs.whiteToMove = not gs.whiteToMove
-            comms.recive_flag = False
         serverTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and not playerOne)
         for e in p.event.get():
             if e.type == p.QUIT:

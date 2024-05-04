@@ -8,6 +8,81 @@ from threading import Thread, Event
 import ChessMain
 import time
 
+isServer = None
+client_socket = None
+server_socket = None
+current_board = None
+whiteToMove = True
+
+def set_server_state(server):
+    global isServer
+    isServer = server
+
+def get_server_state():
+    global isServer
+    return isServer
+
+def set_client_socket(socket):
+    global client_socket
+    client_socket = socket
+
+def get_client_socket():
+    global client_socket
+    return client_socket
+
+def set_server_socket(socket):
+    global server_socket
+    server_socket = socket
+
+def get_server_socket():
+    global server_socket
+    return server_socket
+
+def set_current_board(board):
+    global current_board
+    current_board = board
+
+def get_current_board():
+    global current_board
+    return current_board
+
+def set_whiteToMove(turn):
+    global whiteToMove
+    whiteToMove = turn
+
+def get_whiteToMove():
+    global whiteToMove
+    return whiteToMove
+
+class Move():
+    rankToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
+                    "5": 3, "6": 2, "7": 1, "8": 0}
+    rowsToRanks = {v: k for k, v in rankToRows.items()}
+    filesToCols = {"a": 0, "b": 1, "c": 2, "d": 3,
+                    "e": 4, "f": 5, "g": 6, "h": 7}
+    colsToFiles = {v: k for k, v in filesToCols.items()}
+
+    def __init__(self, startSq, endSq, board):
+        self.startRow = startSq[0]
+        self.startCol = startSq[1]
+        self.endRow = endSq[0]
+        self.endCol = endSq[1]
+        self.pieceMoved = board[self.startRow][self.startCol]
+        self.pieceCaptured = board[self.endRow][self.endCol]
+        self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol #Creating a uniqe move ID for every move 1,1 to 1,2 = 1112
+
+        # Overriding the equals method
+        def __eq__(self, other):
+            if isinstance(other, Move):
+                return self.moveID == other.moveID
+            return False
+                
+    def getChessNotation(self):
+        return self.GetRankFile(self.startRow, self.startCol) + self.GetRankFile(self.endRow, self.endCol)
+
+    def GetRankFile(self, r, c):
+        return self.colsToFiles[c] + self.rowsToRanks[r]
+
 class GameState():
     def __init__(self):
         self.board = [
@@ -60,6 +135,8 @@ class GameState():
                 self.blackKingLocation = (move.startRow, move.startCol)
 
     def MakeMove(self, move):
+        if get_current_board() != None:
+            self.board = get_current_board()
         self.board[move.startRow][move.startCol] = "--"
         self.board[move.endRow][move.endCol] = move.pieceMoved
         self.moveLog.append(move)
@@ -68,6 +145,7 @@ class GameState():
             self.whiteKingLocation = (move.endRow, move.endCol)
         elif(move.pieceMoved == "bK"):
             self.blackKingLocation = (move.endRow, move.endCol)
+        set_current_board(self.board)
 
     def CastleRights(self):
         validMoves = []
@@ -719,82 +797,7 @@ class GameState():
                     if endPiece[0] != allyColor:
                         moves.append(Move((r, c), (endRow, endCol), self.board))
 
-isServer = None
-client_socket = None
-server_socket = None
-current_board = GameState().board
-whiteToMove = True
-
-def set_server_state(server):
-    global isServer
-    isServer = server
-
-def get_server_state():
-    global isServer
-    return isServer
-
-def set_client_socket(socket):
-    global client_socket
-    client_socket = socket
-
-def get_client_socket():
-    global client_socket
-    return client_socket
-
-def set_server_socket(socket):
-    global server_socket
-    server_socket = socket
-
-def get_server_socket():
-    global server_socket
-    return server_socket
-
-def set_current_board(board):
-    global current_board
-    current_board = board
-
-def get_current_board():
-    global current_board
-    return current_board
-
-def set_whiteToMove(turn):
-    global whiteToMove
-    whiteToMove = turn
-
-def get_whiteToMove():
-    global whiteToMove
-    return whiteToMove
-
-class Move():
-    rankToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
-                    "5": 3, "6": 2, "7": 1, "8": 0}
-    rowsToRanks = {v: k for k, v in rankToRows.items()}
-    filesToCols = {"a": 0, "b": 1, "c": 2, "d": 3,
-                    "e": 4, "f": 5, "g": 6, "h": 7}
-    colsToFiles = {v: k for k, v in filesToCols.items()}
-
-    def __init__(self, startSq, endSq, board):
-        self.startRow = startSq[0]
-        self.startCol = startSq[1]
-        self.endRow = endSq[0]
-        self.endCol = endSq[1]
-        self.pieceMoved = board[self.startRow][self.startCol]
-        self.pieceCaptured = board[self.endRow][self.endCol]
-        self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol #Creating a uniqe move ID for every move 1,1 to 1,2 = 1112
-
-        # Overriding the equals method
-        def __eq__(self, other):
-            if isinstance(other, Move):
-                return self.moveID == other.moveID
-            return False
-                
-    def getChessNotation(self):
-        return self.GetRankFile(self.startRow, self.startCol) + self.GetRankFile(self.endRow, self.endCol)
-
-    def GetRankFile(self, r, c):
-        return self.colsToFiles[c] + self.rowsToRanks[r]
-
-# //TODO: Find a way to send who's turn it is
+# Make sure servers recive's client board after move
 class Communication:
     def __init__(self):
         self.gui_queue = queue.Queue()  # Queue for GUI updates
@@ -877,15 +880,15 @@ class Communication:
             game_board = GameState().board
             data = pickle.dumps(game_board)
             client_socket.send(data)
-    
-            data = client_socket.recv(1024)
-            if not data:
-                print("Client disconnected.")
-                self.recive_flag = False
-                break
-            set_current_board(pickle.loads(data))
-            self.recive_flag = True
-            
+            try:
+                data = client_socket.recv(1024)
+                if not data:
+                    print("Client disconnected.")
+                    break
+                set_current_board(pickle.loads(data))
+            except:
+                client_socket.close()
+                server_socket.close()
 
         client_socket.close()
         server_socket.close()
@@ -903,10 +906,8 @@ class Communication:
                 data = client_socket.recv(1024)
                 if not data:
                     print("Server disconnected.")
-                    self.recive_flag = False
                     break
                 set_current_board(pickle.loads(data))
-                self.recive_flag = True
 
         finally:
             client_socket.close()
