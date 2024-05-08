@@ -38,6 +38,7 @@ def SetupConnection(comms):
     comms.connection_established.wait()
 
 def main():
+    print("MAIN WHAT THE FUCK")
     comms = Engine.Communication()
     SetupConnection(comms)
     addr = None # Socket addres
@@ -46,10 +47,13 @@ def main():
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
     gs = Engine.GameState()
-    playerOne = Engine.get_server_state() # If server is playing white this will be True. else, False
-    if not playerOne:
+    playerOne = Engine.get_server_state() # If server is playing this will be True. else, False
+    if not playerOne: # If it's black need to make sure to generate moves for black not white.
         gs.whiteToMove = not gs.whiteToMove
-    validMoves = gs.GetValidMoves()
+        validMoves = gs.GetValidMoves()
+        gs.whiteToMove = not gs.whiteToMove
+    else: # If white do normally.
+        validMoves = gs.GetValidMoves()
     LoadImages() # Only doing this once.
     sqSelected = ()
     playerClicks = []
@@ -63,10 +67,12 @@ def main():
     print(playerOne, " PlayerOne")
     client_socket = Engine.get_client_socket()
     server_socket = Engine.get_server_socket()
-    print(client_socket, " CLIENT")
-    print(server_socket, " SERVER")
 
     while running:
+        if comms.recive_flag:
+            gs.whiteToMove = not gs.whiteToMove
+            validMoves = gs.GetValidMoves()
+            comms.recive_flag = False
         serverTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and not playerOne)
         for e in p.event.get():
             if e.type == p.QUIT:
@@ -179,7 +185,7 @@ def main():
                                 break
                             else:
                                 playerClicks = [sqSelected]
-                        if len(validMoves) == 0: # Check if no valid moves(Can also be draw do not account for that for now)
+                        if len(validMoves) == 0:
                             gs.checkMate = True
                             winner = "White"
                             if gs.whiteToMove: # If whiteToMove = True then white has no moves which means black won.
@@ -199,7 +205,6 @@ def main():
                     gs.board[location[1]][location[0]] = (f"{gs.board[location[1]][location[0]][0]}Q") # Make it a queen
                     gs.promotionFlag = True
                 moveMade = False
-                comms = Engine.Communication()
                 try:
                     addr = client_socket.getpeername()
                 except:
@@ -216,7 +221,6 @@ def main():
                     gs.board[location[1]][location[0]] = (f"{gs.board[location[1]][location[0]][0]}Q") # Make it a queen
                     gs.promotionFlag = True
                 moveMade = False
-                comms = Engine.Communication()
                 try:
                     addr = client_socket.getpeername()
                 except:

@@ -802,9 +802,7 @@ class Communication:
     def __init__(self):
         self.gui_queue = queue.Queue()  # Queue for GUI updates
         self.connection_established = Event()  # Event to signal successful connection
-        self.recive_flag = False # A flag to know when you recived data
-        self.MAX_RECONNECT_ATTEMPTS = 5
-        self.RECONNECT_INTERVAL = 5
+        self.recive_flag = None
 
     def create_display_window(self, host, port, close_event):
         # Initialize the window once outside the loop
@@ -873,20 +871,19 @@ class Communication:
                 print("Error: ", e)
             else:
                 raise
-        
         close_event.set()
-        gui_thread.join()
+        gui_thread.join(timeout=5)
         while True:
-            game_board = GameState().board
-            data = pickle.dumps(game_board)
-            client_socket.send(data)
             try:
-                data = client_socket.recv(1024)
+                data = client_socket.recv(4096)
                 if not data:
                     print("Client disconnected.")
                     break
+                self.recive_flag = True
+                print(self.recive_flag, " RECIVE FLAG, SERVER")
                 set_current_board(pickle.loads(data))
             except:
+                raise
                 client_socket.close()
                 server_socket.close()
 
@@ -903,12 +900,13 @@ class Communication:
 
         try:
             while True:
-                data = client_socket.recv(1024)
+                data = client_socket.recv(4096)
                 if not data:
                     print("Server disconnected.")
                     break
+                self.recive_flag = True
+                print(self.recive_flag, " RECIVE FLAG, CLIENT")
                 set_current_board(pickle.loads(data))
-
         finally:
             client_socket.close()
         return client_socket
@@ -923,8 +921,6 @@ class Communication:
         return IP
     
     def SendMessage(self, socket, board, addr):
-        print(f"{socket}: SOCKET SEND")
-        print(addr, " ADDRESS 2")
         if not socket:
             print(f"No socket. {socket}")
             return
@@ -933,7 +929,6 @@ class Communication:
         data = pickle.dumps(game_board)
         try:
             socket.send(data)
-            print(game_board, " SENT DATA")
         except Exception as e:
             print(f"Failed to send data: {e}")
             print(f"More details: {e.args}")
