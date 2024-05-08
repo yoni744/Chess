@@ -113,17 +113,9 @@ class GameState():
         self.promotionFlag = False # A flag to know when you promoted
         self.server = True # If you will be a server it will be True, client is false. Server is always white.
 
-    """ //TODO: Make the chess multiplayer(plan).
-    1. Only genrate moves for you color, if server generate only for white. If client only for black. - DONE
-
-    2. After each move send self.board over to other player(Client to server, server to client.). - WIP
-
-    3. Add login and create an acount screen.
-
-    4. If you have extra time, create a movelog screen and make everything more optimized. 
-    """
-
     def UndoMoves(self):
+        if get_current_board() != None:
+            self.board = get_current_board()
         if len(self.moveLog) != 0: #make sure there is a move to undo
             move = self.moveLog.pop()
             self.board[move.startRow][move.startCol] = move.pieceMoved
@@ -148,6 +140,8 @@ class GameState():
         set_current_board(self.board)
 
     def CastleRights(self):
+        if get_current_board() != None:
+            self.board = get_current_board()
         validMoves = []
 
         if self.whiteToMove:
@@ -245,6 +239,8 @@ class GameState():
             return validMoves
 
     def GetValidMoves(self):    # All moves, with check 
+        if get_current_board() != None:
+            self.board = get_current_board()
         self.moves = self.GetAllPossibleMoves()
         validMoves = []
         # //TODO: Fix check after promotion
@@ -302,6 +298,8 @@ class GameState():
         return validMoves
 
     def GetAllPossibleMoves(self):    #All possible moves
+        if get_current_board() != None:
+            self.board = get_current_board()
         moves = []
         for r in range(len(self.board)): # num of rows
             for c in range(len(self.board[r])): # num of colls in row
@@ -339,6 +337,8 @@ class GameState():
         return ((Move.filesToCols[loc[2]], Move.rankToRows[loc[3]]))
 
     def GetBlockingMovesBishop(self, location):
+        if get_current_board() != None:
+            self.board = get_current_board()
         blockingMoves = []
         newLocation = location
 
@@ -537,6 +537,8 @@ class GameState():
         return blockingMoves
 
     def GetBlockingMovesRook(self, location): 
+        if get_current_board() != None:
+            self.board = get_current_board()
         blockingMoves = []
         newLocation = location
         if self.whiteToMove:
@@ -688,6 +690,8 @@ class GameState():
         return blockingMoves
 
     def GetBlockingMovesKnight(self, location): # Not really GetBlockingMoves because you can't block a knight... 
+        if get_current_board() != None:
+            self.board = get_current_board()
         blockingMoves = []
         
         for move in self.moves:
@@ -697,6 +701,8 @@ class GameState():
         return blockingMoves
 
     def GetBlockingMovesPawn(self, location): # Not really GetBlockingMoves because you can't block a pawn... 
+        if get_current_board() != None:
+            self.board = get_current_board()
         blockingMoves = []
         
         for move in self.moves: 
@@ -706,6 +712,8 @@ class GameState():
         return blockingMoves
                      
     def GetPawnMoves(self, r, c, moves):
+        if get_current_board() != None:
+            self.board = get_current_board()
         if self.whiteToMove:  # White pawn moves
             if r > 0:  # Prevent moving off the board
                 if self.board[r-1][c] == "--":  # Single square move
@@ -734,6 +742,8 @@ class GameState():
                         moves.append(Move((r, c), (r+1, c+1), self.board))
 
     def GetRookMoves(self, r, c, moves):
+        if get_current_board() != None:
+            self.board = get_current_board()
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Up, down, left, right
         enemy_color = "b" if self.whiteToMove else "w"
         for d in directions:
@@ -753,6 +763,8 @@ class GameState():
                     break
 
     def GetKnightMoves(self, r, c, moves):
+        if get_current_board() != None:
+            self.board = get_current_board()
         knightMoves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
         ally_color = "w" if self.whiteToMove else "b"
         for m in knightMoves:
@@ -764,6 +776,8 @@ class GameState():
                     moves.append(Move((r, c), (endRow, endCol), self.board))
 
     def GetBishopMoves(self, r, c, moves):
+        if get_current_board() != None:
+            self.board = get_current_board()
         directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)] # Four diagonals
         enemy_color = "b" if self.whiteToMove else "w"
         for d in directions:
@@ -787,6 +801,8 @@ class GameState():
         self.GetBishopMoves(r, c, moves)
 
     def GetKingMoves(self, r, c, moves):
+        if get_current_board() != None:
+            self.board = get_current_board()
         kingMoves = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, -1))
         allyColor = "w" if self.whiteToMove else "b"
         for i in range(8):
@@ -797,7 +813,6 @@ class GameState():
                     if endPiece[0] != allyColor:
                         moves.append(Move((r, c), (endRow, endCol), self.board))
 
-# Make sure servers recive's client board after move
 class Communication:
     def __init__(self):
         self.gui_queue = queue.Queue()  # Queue for GUI updates
@@ -875,7 +890,7 @@ class Communication:
         gui_thread.join(timeout=5)
         while True:
             try:
-                data = client_socket.recv(4096)
+                data = client_socket.recv(1024)
                 if not data:
                     print("Client disconnected.")
                     break
@@ -900,7 +915,7 @@ class Communication:
 
         try:
             while True:
-                data = client_socket.recv(4096)
+                data = client_socket.recv(1024)
                 if not data:
                     print("Server disconnected.")
                     break
@@ -925,6 +940,7 @@ class Communication:
             print(f"No socket. {socket}")
             return
         game_board = board
+        print(game_board)
         set_current_board(board)
         data = pickle.dumps(game_board)
         try:

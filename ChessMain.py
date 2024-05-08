@@ -67,7 +67,7 @@ def main():
     print(playerOne, " PlayerOne")
     client_socket = Engine.get_client_socket()
     server_socket = Engine.get_server_socket()
-
+    # //TODO: Find out why it doesn't always updates board.
     while running:
         if comms.recive_flag:
             gs.whiteToMove = not gs.whiteToMove
@@ -230,10 +230,12 @@ def main():
         if "O-O" in str(moveMade):
             validMoves = gs.GetValidMoves()
             moveMade = False
+            comms.SendMessage(client_socket, gs.board, addr)
 
         if gs.promotionFlag == True: # Make sure promotion moves count as check.
             validMoves = gs.PromotionCheck()
             moveMade = False
+            comms.SendMessage(client_socket, gs.board, addr)
         
         if gs.Draw or gs.checkMate:
             gameOver = True # Make it nicer looking
