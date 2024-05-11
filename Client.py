@@ -1,51 +1,74 @@
 import socket
-import random
+import rsa
+from cryptography.fernet import Fernet
+from base64 import b64decode, b64encode
+import json
 
-def get_host_ip():
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
-            IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    return IP
+class Encryption:
+    def __init__(self):
+        self.public_key, self.private_key = rsa.newkeys(2048)
+        self.partner_public_key = None
+        self.symmetric_key = None
+        self.cipher = None
 
-def start_server(initial_port=6752):
-    host_ip = get_host_ip()
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    def send_public_key(self, socket):
+        socket.sendall(self.public_key.save_pkcs1('PEM'))
+    
+    def receive_public_key(self, socket):
+        key_data = socket.recv(4096)
+        self.partner_public_key = rsa.PublicKey.load_pkcs1(key_data, 'PEM')
 
-    port = initial_port
-    while True:
-        try:
-            server_socket.bind((host_ip, port))
-            print(f"Server successfully bound to {host_ip}:{port}")
-            break
-        except socket.error as e:
-            print(f"Failed to bind to {host_ip}:{port}: {e}")
-            port = random.randint(1000, 9999)  # Try a new random port
-            print(f"Trying new port: {port}")
+    def receive_data(self, socket):
+        received_payload = socket.recv(4096).decode('utf-8')
+        encrypted_key, encrypted_data = received_payload.split("::")
+        self.symmetric_key = rsa.decrypt(b64decode(encrypted_key), self.private_key)
+        self.cipher = Fernet(self.symmetric_key)
+        decrypted_data = self.cipher.decrypt(b64decode(encrypted_data))
+        return json.loads(decrypted_data.decode('utf-8'))
 
-    server_socket.listen(1)
-    print(f"Server listening on {host_ip}:{port}")
-    client_socket, addr = server_socket.accept()
-    print(f"Received connection from {addr}")
+    def generate_symmetric_key(self):
+        self.symmetric_key = Fernet.generate_key()
+        self.cipher = Fernet(self.symmetric_key)
 
-    try:
-        while True:
-            message = input("Enter message to send: ")
-            if message == "exit":
-                break
-            client_socket.send(message.encode())
+    def encrypt_symmetric_key(self):
+        encrypted_key = rsa.encrypt(self.symmetric_key, self.partner_public_key)
+        return b64encode(encrypted_key).decode('utf-8')
 
-            data = client_socket.recv(1024).decode()
-            if not data:
-                print("Client disconnected.")
-                break
-            print(f"Received from client: {data}")
-    finally:
-        client_socket.close()
-        server_socket.close()
+    def encrypt_data(self, data):
+        encrypted_data = self.cipher.encrypt(data.encode('utf-8'))
+        return b64encode(encrypted_data).decode('utf-8')
 
-if __name__ == "__main__":
-    start_server()
+def send_message(socket, encryption, data_matrix):
+    encryption.generate_symmetric_key()
+    serialized_data = json.dumps(data_matrix)
+    encrypted_key = encryption.encrypt_symmetric_key()
+    encrypted_data = encryption.encrypt_data(serialized_data)
+    socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8'))
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect(('localhost', 12345))
+encryption = Encryption()
+
+encryption.send_public_key(client_socket)
+encryption.receive_public_key(client_socket)
+
+# Example 2D list to send from the client
+data_matrix_to_send = [
+    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+    ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
+    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"]
+]
+
+# Send a 2D list to the server
+send_message(client_socket, encryption, data_matrix_to_send)
+
+# Optionally receive a response or another data matrix
+received_matrix = encryption.receive_data(client_socket)
+print("\nReceived 2D list from server: ", received_matrix)
+
+client_socket.close()

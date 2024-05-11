@@ -1,12 +1,18 @@
 import socket
 import random
-import pickle
 import queue
+import json
 import tkinter as tk
 from tkinter import simpledialog
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot
 from threading import Thread, Event
 import ChessMain
 import time
+import rsa
+from cryptography.fernet import Fernet
+from base64 import b64decode, b64encode
 
 isServer = None
 client_socket = None
@@ -813,11 +819,46 @@ class GameState():
                     if endPiece[0] != allyColor:
                         moves.append(Move((r, c), (endRow, endCol), self.board))
 
-class Communication:
+class Encryption():
+    def __init__(self):
+        self.public_key, self.private_key = rsa.newkeys(2048)
+        self.partner_public_key = None
+        self.symmetric_key = None
+        self.cipher = None
+    
+    def send_public_key(self, socket):
+        socket.sendall(self.public_key.save_pkcs1('PEM'))
+    
+    def receive_public_key(self, socket):
+        key_data = socket.recv(4096)
+        self.partner_public_key = rsa.PublicKey.load_pkcs1(key_data, 'PEM')
+    
+    def receive_data(self, socket):
+        received_payload = socket.recv(4096).decode('utf-8')
+        encrypted_key, encrypted_data = received_payload.split("::")
+        self.symmetric_key = rsa.decrypt(b64decode(encrypted_key), self.private_key)
+        self.cipher = Fernet(self.symmetric_key)
+        decrypted_data = self.cipher.decrypt(b64decode(encrypted_data))
+        return json.loads(decrypted_data.decode('utf-8'))
+
+    def generate_symmetric_key(self):
+        self.symmetric_key = Fernet.generate_key()
+        self.cipher = Fernet(self.symmetric_key)
+
+    def encrypt_symmetric_key(self):
+        encrypted_key = rsa.encrypt(self.symmetric_key, self.partner_public_key)
+        return b64encode(encrypted_key).decode('utf-8')
+
+    def encrypt_data(self, data):
+        encrypted_data = self.cipher.encrypt(data.encode('utf-8'))
+        return b64encode(encrypted_data).decode('utf-8')
+
+class Communication():
     def __init__(self):
         self.gui_queue = queue.Queue()  # Queue for GUI updates
         self.connection_established = Event()  # Event to signal successful connection
         self.recive_flag = None
+        self.encrypt = Encryption()
 
     def create_display_window(self, host, port, close_event):
         # Initialize the window once outside the loop
@@ -873,13 +914,14 @@ class Communication:
         
         server_socket.listen(1)
         print(f"Server listening on {host_ip}:{port}")
-        print(server_socket, " 0")
 
         try:
             client_socket, addr = server_socket.accept()
             set_client_socket(client_socket)
             print(f"Received connection from {addr}")
             self.connection_established.set()
+            self.encrypt.receive_public_key(client_socket)
+            self.encrypt.send_public_key(client_socket)
         except socket.error as e:
             if e.args[0] == socket.errno.EAGAIN or e.args[0] == socket.errno.EWOULDBLOCK:
                 print("No connections are available to be accepted")
@@ -890,13 +932,13 @@ class Communication:
         gui_thread.join(timeout=5)
         while True:
             try:
-                data = client_socket.recv(1024)
+                data = self.encrypt.receive_data(client_socket)
                 if not data:
                     print("Client disconnected.")
                     break
                 self.recive_flag = True
-                print(self.recive_flag, " RECIVE FLAG, SERVER")
-                set_current_board(pickle.loads(data))
+                print(f"\nReceived board: {data}")
+                set_current_board(data)
             except:
                 raise
                 client_socket.close()
@@ -912,16 +954,18 @@ class Communication:
         set_client_socket(client_socket)
         print("Connected to server at {}:{}".format(host, port))
         self.connection_established.set()
+        self.encrypt.send_public_key(client_socket)
+        self.encrypt.receive_public_key(client_socket)
 
         try:
             while True:
-                data = client_socket.recv(1024)
+                data = self.encrypt.receive_data(client_socket)
                 if not data:
                     print("Server disconnected.")
                     break
                 self.recive_flag = True
-                print(self.recive_flag, " RECIVE FLAG, CLIENT")
-                set_current_board(pickle.loads(data))
+                print(f"\nReceived board: {data}")
+                set_current_board(data)
         finally:
             client_socket.close()
         return client_socket
@@ -936,18 +980,14 @@ class Communication:
         return IP
     
     def SendMessage(self, socket, board, addr):
-        if not socket:
-            print(f"No socket. {socket}")
-            return
-        game_board = board
-        print(game_board)
-        set_current_board(board)
-        data = pickle.dumps(game_board)
+        self.encrypt.generate_symmetric_key() # Generate symmetric key
+        serialized_data = json.dumps(board) # Serialize the board
+        encrypted_key = self.encrypt.encrypt_symmetric_key() # Encrypt symmetric key
+        encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
         try:
-            socket.send(data)
+            socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
         except Exception as e:
-            print(f"Failed to send data: {e}")
-            print(f"More details: {e.args}")
+            raise e
 
     def setup_network_mode(self):
         root = tk.Tk()

@@ -1,116 +1,78 @@
 import socket
-import random
-import tkinter as tk
-from tkinter import simpledialog
-from threading import Thread, Event
+import rsa
+from cryptography.fernet import Fernet
+from base64 import b64encode, b64decode
+import json
 
-def get_host_ip():
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
-            IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    return IP
+class Encryption:
+    def __init__(self):
+        self.public_key, self.private_key = rsa.newkeys(2048)
+        self.partner_public_key = None
+        self.symmetric_key = None
+        self.cipher = None
+    
+    def send_public_key(self, socket):
+        socket.sendall(self.public_key.save_pkcs1('PEM'))
+    
+    def receive_public_key(self, socket):
+        key_data = socket.recv(4096)
+        self.partner_public_key = rsa.PublicKey.load_pkcs1(key_data, 'PEM')
+    
+    def receive_data(self, socket):
+        received_payload = socket.recv(4096).decode('utf-8')
+        encrypted_key, encrypted_data = received_payload.split("::")
+        self.symmetric_key = rsa.decrypt(b64decode(encrypted_key), self.private_key)
+        self.cipher = Fernet(self.symmetric_key)
+        decrypted_data = self.cipher.decrypt(b64decode(encrypted_data))
+        return json.loads(decrypted_data.decode('utf-8'))
 
-def create_display_window(host, port, close_event):
-    window = tk.Tk()
-    window.title("Server Information")
-    window.geometry("300x100")
+    def generate_symmetric_key(self):
+        self.symmetric_key = Fernet.generate_key()
+        self.cipher = Fernet(self.symmetric_key)
 
-    tk.Label(window, text=f"Host: {host}").pack()
-    tk.Label(window, text=f"Port: {port}").pack()
+    def encrypt_symmetric_key(self):
+        encrypted_key = rsa.encrypt(self.symmetric_key, self.partner_public_key)
+        return b64encode(encrypted_key).decode('utf-8')
 
-    def check_close_event():
-        if close_event.is_set():
-            window.destroy()
-        else:
-            window.after(100, check_close_event)  # Check again after 100ms
+    def encrypt_data(self, data):
+        encrypted_data = self.cipher.encrypt(data.encode('utf-8'))
+        return b64encode(encrypted_data).decode('utf-8')
 
-    window.after(100, check_close_event)
-    window.mainloop()
+def send_message(socket, encryption, data_matrix):
+    encryption.generate_symmetric_key()
+    serialized_data = json.dumps(data_matrix)
+    encrypted_key = encryption.encrypt_symmetric_key()
+    encrypted_data = encryption.encrypt_data(serialized_data)
+    socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8'))
 
-def start_server(port=6752):
-    host_ip = get_host_ip()
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('localhost', 12345))
+server_socket.listen(1)
+encryption = Encryption()
 
-    while True:
-        try:
-            server_socket.bind((host_ip, port))
-            print(f"Server successfully bound to {host_ip}:{port}")
-            break
-        except OSError:
-            print(f"Failed to bind to {host_ip}:{port}, trying a new port...")
-            port = random.randint(1000, 9999)
+print("\nServer started. Waiting for connections...")
+connection, address = server_socket.accept()
+print(f"Connected by {address}")
 
-    close_event = Event()
-    gui_thread = Thread(target=create_display_window, args=(host_ip, port, close_event))
-    gui_thread.start()
+encryption.receive_public_key(connection)
+encryption.send_public_key(connection)
 
-    server_socket.listen(1)
-    print(f"Server listening on {host_ip}:{port}")
+# Example 2D list to send
+data_matrix_to_send = [
+    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+    ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["--", "--", "--", "--", "--", "--", "--", "--"],
+    ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
+    ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
+]
 
-    client_socket, addr = server_socket.accept()
-    print(f"Received connection from {addr}")
+send_message(connection, encryption, data_matrix_to_send)
 
-    close_event.set()
-    gui_thread.join()
+# Receive a response or another data matrix from client
+received_matrix = encryption.receive_data(connection)
+print("\nReceived 2D list from client: ", received_matrix)
 
-    try:
-        while True:
-            message = [1, 2, 3, 4, 5,6 ,67]
-            client_socket.send(message.encode())
-
-            data = client_socket.recv(1024)
-            if not data:
-                print("Client disconnected.")
-                break
-            print("Received from client: " + data.decode())
-    finally:
-        client_socket.close()
-        server_socket.close()
-
-def start_client(host, port):
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-    print("Connected to server at {}:{}".format(host, port))
-
-    try:
-        while True:
-            data = client_socket.recv(1024)
-            if not data:
-                print("Server disconnected.")
-                break
-            print("Received from server: " + data.decode())
-
-            message = input("Enter a message to send to the server: ")
-            client_socket.send(message.encode())
-    finally:
-        client_socket.close()
-
-def setup_network_mode():
-    root = tk.Tk()
-    root.title("Choose Mode")
-    root.geometry("200x100")
-
-    def server():
-        root.withdraw()
-        start_server()
-        root.destroy()
-
-    def client():
-        root.withdraw()
-        host = simpledialog.askstring("Connect to Server", "Enter the host IP:", parent=root)
-        port = simpledialog.askinteger("Connect to Server", "Enter the port:", parent=root)
-        if host and port:
-            start_client(host, port)
-        root.destroy()
-
-    tk.Button(root, text="Server", command=server).pack(fill=tk.X)
-    tk.Button(root, text="Client", command=client).pack(fill=tk.X)
-
-    root.mainloop()
-
-if __name__ == "__main__":
-    setup_network_mode()
+connection.close()

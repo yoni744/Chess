@@ -38,7 +38,6 @@ def SetupConnection(comms):
     comms.connection_established.wait()
 
 def main():
-    print("MAIN WHAT THE FUCK")
     comms = Engine.Communication()
     SetupConnection(comms)
     addr = None # Socket addres
