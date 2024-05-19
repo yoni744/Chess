@@ -65,8 +65,7 @@ def main():
     longBlackCastle = [(0, 4), (0, 1)]
     print(playerOne, " PlayerOne")
     client_socket = Engine.get_client_socket()
-    server_socket = Engine.get_server_socket()
-    # //TODO: Find out why it doesn't always updates board.
+
     while running:
         if comms.recive_flag:
             gs.whiteToMove = not gs.whiteToMove

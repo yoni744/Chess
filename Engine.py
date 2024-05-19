@@ -14,11 +14,17 @@ import rsa
 from cryptography.fernet import Fernet
 from base64 import b64decode, b64encode
 
+#   //TODO: Plan for Multi-Client Able Server:
+#   1. Create a dict, address will be the key, board for each game/client will be the data.
+#   2. When getting a message from said address, pass it through the dict to get the board, update it, and send it back. 
+
 isServer = None
 client_socket = None
 server_socket = None
 current_board = None
 whiteToMove = True
+clients = [] # A list of the port to use for game_states
+game_states = {} # A dict of boards with ports as keys
 
 def set_server_state(server):
     global isServer
@@ -59,6 +65,10 @@ def set_whiteToMove(turn):
 def get_whiteToMove():
     global whiteToMove
     return whiteToMove
+
+def assign_board(addr):
+    gs = GameState()
+    game_states.update({addr: gs.board})
 
 class Move():
     rankToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
@@ -835,6 +845,7 @@ class Encryption():
     
     def receive_data(self, socket):
         received_payload = socket.recv(4096).decode('utf-8')
+        print(received_payload, " RECEIVED PAYLOAD")
         encrypted_key, encrypted_data = received_payload.split("::")
         self.symmetric_key = rsa.decrypt(b64decode(encrypted_key), self.private_key)
         self.cipher = Fernet(self.symmetric_key)
@@ -859,6 +870,7 @@ class Communication():
         self.connection_established = Event()  # Event to signal successful connection
         self.recive_flag = None
         self.encrypt = Encryption()
+        self.client_flag = None # A flag to alert when a new client joins
 
     def create_display_window(self, host, port, close_event):
         # Initialize the window once outside the loop
@@ -892,6 +904,29 @@ class Communication():
         window.after(100, check_close_event)
         window.mainloop()
 
+    def handle_clients(self, addr, client_socket, server_socket):
+        self.client_flag = True
+        clients.append((addr[1])) # A list of the port to use for assign_board
+        assign_board(addr[1]) # Only use the port as the key
+        print(game_states)
+
+        while True:
+            try:
+                data = self.encrypt.receive_data(client_socket)
+                if not data:
+                    print("Client disconnected.")
+                    break
+                self.recive_flag = True
+                print(f"\nReceived board: {data}")
+                set_current_board(data)
+            except:
+                raise
+                client_socket.close()
+                server_socket.close()
+
+        client_socket.close()
+        server_socket.close()
+
     def start_server(self, port=6752):
         set_server_state(True)
         host_ip = self.get_host_ip()
@@ -912,40 +947,27 @@ class Communication():
         gui_thread = Thread(target=self.create_display_window, args=(host_ip, port, close_event))
         gui_thread.start()
         
-        server_socket.listen(1)
+        server_socket.listen(5)
         print(f"Server listening on {host_ip}:{port}")
 
-        try:
-            client_socket, addr = server_socket.accept()
-            set_client_socket(client_socket)
-            print(f"Received connection from {addr}")
-            self.connection_established.set()
-            self.encrypt.receive_public_key(client_socket)
-            self.encrypt.send_public_key(client_socket)
-        except socket.error as e:
-            if e.args[0] == socket.errno.EAGAIN or e.args[0] == socket.errno.EWOULDBLOCK:
-                print("No connections are available to be accepted")
-                print("Error: ", e)
-            else:
-                raise
-        close_event.set()
-        gui_thread.join(timeout=5)
         while True:
             try:
-                data = self.encrypt.receive_data(client_socket)
-                if not data:
-                    print("Client disconnected.")
-                    break
-                self.recive_flag = True
-                print(f"\nReceived board: {data}")
-                set_current_board(data)
-            except:
-                raise
-                client_socket.close()
-                server_socket.close()
-
-        client_socket.close()
-        server_socket.close()
+                client_socket, addr = server_socket.accept()
+                set_client_socket(client_socket)
+                print(f"Received connection from {addr}")
+                self.connection_established.set()
+                self.encrypt.receive_public_key(client_socket)
+                self.encrypt.send_public_key(client_socket)
+                client_thread = Thread(target=self.handle_clients, args=(addr, client_socket, server_socket))
+                client_thread.start()
+            except socket.error as e:
+                if e.args[0] == socket.errno.EAGAIN or e.args[0] == socket.errno.EWOULDBLOCK:
+                    print("No connections are available to be accepted")
+                    print("Error: ", e)
+                else:
+                    raise
+            close_event.set()
+            gui_thread.join(timeout=5)
 
     def start_client(self, host, port):
         set_server_state(False)

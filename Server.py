@@ -1,78 +1,65 @@
 import socket
-import rsa
-from cryptography.fernet import Fernet
-from base64 import b64encode, b64decode
-import json
+import threading
 
-class Encryption:
-    def __init__(self):
-        self.public_key, self.private_key = rsa.newkeys(2048)
-        self.partner_public_key = None
-        self.symmetric_key = None
-        self.cipher = None
-    
-    def send_public_key(self, socket):
-        socket.sendall(self.public_key.save_pkcs1('PEM'))
-    
-    def receive_public_key(self, socket):
-        key_data = socket.recv(4096)
-        self.partner_public_key = rsa.PublicKey.load_pkcs1(key_data, 'PEM')
-    
-    def receive_data(self, socket):
-        received_payload = socket.recv(4096).decode('utf-8')
-        encrypted_key, encrypted_data = received_payload.split("::")
-        self.symmetric_key = rsa.decrypt(b64decode(encrypted_key), self.private_key)
-        self.cipher = Fernet(self.symmetric_key)
-        decrypted_data = self.cipher.decrypt(b64decode(encrypted_data))
-        return json.loads(decrypted_data.decode('utf-8'))
+# Global list to keep track of connected clients and their addresses
+clients = []
 
-    def generate_symmetric_key(self):
-        self.symmetric_key = Fernet.generate_key()
-        self.cipher = Fernet(self.symmetric_key)
+# Function to handle client connection
+def handle_client(client_socket, client_address):
+    while True:
+        try:
+            message = client_socket.recv(1024)
+            if message:
+                print(f"Message from {client_address}: {message.decode('utf-8')}")
+                broadcast(message, client_socket)
+            else:
+                remove(client_socket)
+                break
+        except:
+            continue
 
-    def encrypt_symmetric_key(self):
-        encrypted_key = rsa.encrypt(self.symmetric_key, self.partner_public_key)
-        return b64encode(encrypted_key).decode('utf-8')
+# Function to broadcast a message to all clients
+def broadcast(message, client_socket):
+    for client in clients:
+        if client[0] != client_socket:
+            try:
+                client[0].send(message)
+            except:
+                remove(client[0])
 
-    def encrypt_data(self, data):
-        encrypted_data = self.cipher.encrypt(data.encode('utf-8'))
-        return b64encode(encrypted_data).decode('utf-8')
+# Function to remove a client from the list
+def remove(client_socket):
+    for client in clients:
+        if client[0] == client_socket:
+            clients.remove(client)
+            break
 
-def send_message(socket, encryption, data_matrix):
-    encryption.generate_symmetric_key()
-    serialized_data = json.dumps(data_matrix)
-    encrypted_key = encryption.encrypt_symmetric_key()
-    encrypted_data = encryption.encrypt_data(serialized_data)
-    socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8'))
+# Main server function
+def server_program():
+    host = "127.0.0.1"
+    port = 12345
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(5)
+    print(f"Server started on {host}:{port}")
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind(('localhost', 12345))
-server_socket.listen(1)
-encryption = Encryption()
+    # Accepting clients
+    while True:
+        client_socket, client_address = server_socket.accept()
+        clients.append((client_socket, client_address))
+        print(f"Connection from {client_address}")
 
-print("\nServer started. Waiting for connections...")
-connection, address = server_socket.accept()
-print(f"Connected by {address}")
+        # Starting a new thread for each client
+        threading.Thread(target=handle_client, args=(client_socket, client_address)).start()
 
-encryption.receive_public_key(connection)
-encryption.send_public_key(connection)
+        # Allow server to send messages to clients
+        threading.Thread(target=server_send, args=(server_socket,)).start()
 
-# Example 2D list to send
-data_matrix_to_send = [
-    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
-    ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
-    ["--", "--", "--", "--", "--", "--", "--", "--"],
-    ["--", "--", "--", "--", "--", "--", "--", "--"],
-    ["--", "--", "--", "--", "--", "--", "--", "--"],
-    ["--", "--", "--", "--", "--", "--", "--", "--"],
-    ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
-    ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
-]
+# Function for server to send messages
+def server_send(server_socket):
+    while True:
+        message = input("")
+        broadcast(message.encode('utf-8'), server_socket)
 
-send_message(connection, encryption, data_matrix_to_send)
-
-# Receive a response or another data matrix from client
-received_matrix = encryption.receive_data(connection)
-print("\nReceived 2D list from client: ", received_matrix)
-
-connection.close()
+if __name__ == "__main__":
+    server_program()
