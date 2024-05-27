@@ -1,65 +1,53 @@
-import socket
 import threading
+import socket
+import tkinter as tk
 
-# Global list to keep track of connected clients and their addresses
-clients = []
+class ChessServer:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.bind((self.host, self.port))
+        self.server_socket.listen(5)
+        self.clients = []
 
-# Function to handle client connection
-def handle_client(client_socket, client_address):
-    while True:
-        try:
-            message = client_socket.recv(1024)
-            if message:
-                print(f"Message from {client_address}: {message.decode('utf-8')}")
-                broadcast(message, client_socket)
-            else:
-                remove(client_socket)
-                break
-        except:
-            continue
+    def start_server(self):
+        print("Server started...")
+        while True:
+            client_socket, client_address = self.server_socket.accept()
+            print(f"Client {client_address} connected")
+            self.clients.append((client_socket, client_address))
+            client_thread = threading.Thread(target=self.handle_client, args=(client_socket, client_address))
+            client_thread.start()
 
-# Function to broadcast a message to all clients
-def broadcast(message, client_socket):
-    for client in clients:
-        if client[0] != client_socket:
-            try:
-                client[0].send(message)
-            except:
-                remove(client[0])
+    def handle_client(self, client_socket, client_address):
+        window = tk.Tk()
+        window.title(f"Chess Game with {client_address}")
 
-# Function to remove a client from the list
-def remove(client_socket):
-    for client in clients:
-        if client[0] == client_socket:
-            clients.remove(client)
-            break
+        # Initialize chess board here
+        board = tk.Canvas(window, width=400, height=400)
+        board.pack()
 
-# Main server function
-def server_program():
-    host = "127.0.0.1"
-    port = 12345
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(5)
-    print(f"Server started on {host}:{port}")
+        def listen_to_client():
+            while True:
+                try:
+                    data = client_socket.recv(1024).decode()
+                    if not data:
+                        break
+                    # Process the received data and update the board
+                except:
+                    break
 
-    # Accepting clients
-    while True:
-        client_socket, client_address = server_socket.accept()
-        clients.append((client_socket, client_address))
-        print(f"Connection from {client_address}")
+        threading.Thread(target=listen_to_client, daemon=True).start()
+        window.protocol("WM_DELETE_WINDOW", lambda: self.on_closing(client_socket, window))
+        window.mainloop()
 
-        # Starting a new thread for each client
-        threading.Thread(target=handle_client, args=(client_socket, client_address)).start()
-
-        # Allow server to send messages to clients
-        threading.Thread(target=server_send, args=(server_socket,)).start()
-
-# Function for server to send messages
-def server_send(server_socket):
-    while True:
-        message = input("")
-        broadcast(message.encode('utf-8'), server_socket)
+    def on_closing(self, client_socket, window):
+        client_socket.close()
+        window.destroy()
 
 if __name__ == "__main__":
-    server_program()
+    server = ChessServer('localhost', 12345)
+    threading.Thread(target=server.start_server, daemon=True).start()
+
+    tk.mainloop()  # This keeps the server running with its own Tkinter event loop

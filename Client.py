@@ -1,32 +1,37 @@
 import socket
 import threading
+import tkinter as tk
 
-# Function to receive messages from the server
-def receive_messages(client_socket):
-    while True:
-        try:
-            message = client_socket.recv(1024).decode('utf-8')
-            if message:
-                print(f"Received from server: {message}")
-        except:
-            print("Connection lost.")
-            client_socket.close()
-            break
+class ChessClient:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect((self.host, self.port))
+        self.window = tk.Tk()
+        self.window.title("Chess Client")
 
-# Main client function
-def client_program():
-    host = "127.0.0.1"
-    port = 12345
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-    
-    # Starting a thread to receive messages
-    threading.Thread(target=receive_messages, args=(client_socket,)).start()
+        # Initialize chess board here
+        self.board = tk.Canvas(self.window, width=400, height=400)
+        self.board.pack()
 
-    # Sending messages to the server
-    while True:
-        message = input("")
-        client_socket.send(message.encode('utf-8'))
+        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
+        threading.Thread(target=self.listen_to_server, daemon=True).start()
+        self.window.mainloop()
+
+    def listen_to_server(self):
+        while True:
+            try:
+                data = self.client_socket.recv(1024).decode()
+                if not data:
+                    break
+                # Process the received data and update the board
+            except:
+                break
+
+    def on_closing(self):
+        self.client_socket.close()
+        self.window.destroy()
 
 if __name__ == "__main__":
-    client_program()
+    client = ChessClient('localhost', 12345)

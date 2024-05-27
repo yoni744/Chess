@@ -170,7 +170,8 @@ def main():
                         
                         for x in range(len(validMoves)):
                             try:
-                                print(validMoves[x].getChessNotation() + " Valid") # Debugging
+                                # print(validMoves[x].getChessNotation() + " Valid") # Debugging
+                                pass
                             except:
                                 validMoves.remove(validMoves[x])
                                 x -= 1
@@ -238,9 +239,16 @@ def main():
         if gs.Draw or gs.checkMate:
             gameOver = True # Make it nicer looking
 
-        DrawGameState(screen, Engine.get_current_board())
-        clock.tick(MAX_FPS)
-        p.display.flip()
+        if playerOne: # Only go in if you're the server
+            for client in Engine.clients:
+                DrawGameState(screen, Engine.game_boards[client])
+                gs = Engine.game_states[client]
+                clock.tick(MAX_FPS)
+                p.display.flip()
+        else:
+            DrawGameState(screen, Engine.get_current_board())
+            clock.tick(MAX_FPS)
+            p.display.flip()
 
 
 if __name__ == '__main__':

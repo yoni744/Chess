@@ -23,8 +23,9 @@ client_socket = None
 server_socket = None
 current_board = None
 whiteToMove = True
-clients = [] # A list of the port to use for game_states
-game_states = {} # A dict of boards with ports as keys
+clients = [] # A list of the port to use for game_boards
+game_boards = {} # A dict of boards with ports as keys
+game_states = {} # A dict of instances of the GameState() class with ports as keys. All ports should have a corresponding board, and GameState() isntance.
 
 def set_server_state(server):
     global isServer
@@ -67,8 +68,9 @@ def get_whiteToMove():
     return whiteToMove
 
 def assign_board(addr):
-    gs = GameState()
-    game_states.update({addr: gs.board})
+    gs = GameState() # Create a new instance of GameState per client
+    game_boards.update({addr: gs.board})
+    game_states.update({addr: gs})
 
 class Move():
     rankToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
@@ -259,7 +261,6 @@ class GameState():
             self.board = get_current_board()
         self.moves = self.GetAllPossibleMoves()
         validMoves = []
-        # //TODO: Fix check after promotion
 
         if self.InCheck():
             i = 0
@@ -845,7 +846,6 @@ class Encryption():
     
     def receive_data(self, socket):
         received_payload = socket.recv(4096).decode('utf-8')
-        print(received_payload, " RECEIVED PAYLOAD")
         encrypted_key, encrypted_data = received_payload.split("::")
         self.symmetric_key = rsa.decrypt(b64decode(encrypted_key), self.private_key)
         self.cipher = Fernet(self.symmetric_key)
@@ -870,45 +870,15 @@ class Communication():
         self.connection_established = Event()  # Event to signal successful connection
         self.recive_flag = None
         self.encrypt = Encryption()
-        self.client_flag = None # A flag to alert when a new client joins
-
-    def create_display_window(self, host, port, close_event):
-        # Initialize the window once outside the loop
-        window = tk.Tk()
-        window.title("Server Information")
-        window.geometry("300x100")
-
-        host_var = tk.StringVar(value=f"Host: {host}")
-        port_var = tk.StringVar(value=f"Port: {port}")
-        tk.Label(window, textvariable=host_var).pack()
-        tk.Label(window, textvariable=port_var).pack()
-
-        def update_gui():
-            # Handle GUI updates within a try-except inside the loop
-            try:
-                func, args = self.gui_queue.get_nowait()
-                func(*args)
-                self.gui_queue.task_done()
-            except queue.Empty:
-                pass
-            if not close_event.is_set():
-                window.after(100, update_gui)  # Continue updating if close_event is not set
-
-        def check_close_event():
-            if close_event.is_set():
-                window.destroy()  # Close the window if close_event is set
-            else:
-                window.after(100, check_close_event)  # Continue checking close_event
-
-        window.after(100, update_gui)
-        window.after(100, check_close_event)
-        window.mainloop()
+        self.client_flag = None  # A flag to alert when a new client joins
 
     def handle_clients(self, addr, client_socket, server_socket):
         self.client_flag = True
-        clients.append((addr[1])) # A list of the port to use for assign_board
-        assign_board(addr[1]) # Only use the port as the key
-        print(game_states)
+        client_port = addr[1] # Only take the port
+        clients.append(client_port)  # A list of the port to use for assign_board
+        assign_board(client_port)  # Only use the port as the key
+
+        game_board = game_boards[client_port]
 
         while True:
             try:
@@ -917,12 +887,11 @@ class Communication():
                     print("Client disconnected.")
                     break
                 self.recive_flag = True
-                print(f"\nReceived board: {data}")
-                set_current_board(data)
+                game_board = data
             except:
-                raise
                 client_socket.close()
                 server_socket.close()
+                break
 
         client_socket.close()
         server_socket.close()
@@ -944,9 +913,6 @@ class Communication():
                 port = random.randint(1000, 9999)
 
         close_event = Event()
-        gui_thread = Thread(target=self.create_display_window, args=(host_ip, port, close_event))
-        gui_thread.start()
-        
         server_socket.listen(5)
         print(f"Server listening on {host_ip}:{port}")
 
@@ -967,7 +933,6 @@ class Communication():
                 else:
                     raise
             close_event.set()
-            gui_thread.join(timeout=5)
 
     def start_client(self, host, port):
         set_server_state(False)
@@ -986,7 +951,6 @@ class Communication():
                     print("Server disconnected.")
                     break
                 self.recive_flag = True
-                print(f"\nReceived board: {data}")
                 set_current_board(data)
         finally:
             client_socket.close()
@@ -1000,16 +964,51 @@ class Communication():
         except Exception:
             IP = '127.0.0.1'
         return IP
-    
+
     def SendMessage(self, socket, board, addr):
         self.encrypt.generate_symmetric_key() # Generate symmetric key
         serialized_data = json.dumps(board) # Serialize the board
+        if self.client_flag: # If you're server send each client's board
+            serialized_data = json.dumps(game_boards[addr[1]]) # Serialize the board
         encrypted_key = self.encrypt.encrypt_symmetric_key() # Encrypt symmetric key
         encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
         try:
             socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
         except Exception as e:
             raise e
+
+    def setup_network_mode(self):
+        root = tk.Tk()
+        root.title("Choose Mode")
+        root.geometry("200x100")
+
+        def server():
+            root.withdraw()  # Hide the window
+            thread = Thread(target=self.start_server)
+            thread.start()
+            root.destroy()  # Destroy the window after starting the thread
+
+        def client():
+            root.withdraw()  # Hide the window
+            host = simpledialog.askstring("Connect to Server", "Enter the host IP:", parent=root)
+            port = simpledialog.askinteger("Connect to Server", "Enter the port:", parent=root)
+            if host and port:
+                thread = Thread(target=self.start_client, args=(host, port))
+                thread.start()
+            root.destroy()  # Destroy the window after starting the thread
+
+        tk.Button(root, text="Server", command=server).pack(fill=tk.X)
+        tk.Button(root, text="Client", command=client).pack(fill=tk.X)
+        root.mainloop()
+
+    def get_host_ip(self):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect(("8.8.8.8", 80))
+                IP = s.getsockname()[0]
+        except Exception:
+            IP = '127.0.0.1'
+        return IP
 
     def setup_network_mode(self):
         root = tk.Tk()
