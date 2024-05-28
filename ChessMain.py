@@ -67,10 +67,9 @@ def main():
     client_socket = Engine.get_client_socket()
 
     while running:
-        if comms.recive_flag:
-            gs.whiteToMove = not gs.whiteToMove
-            validMoves = gs.GetValidMoves()
-            comms.recive_flag = False
+        if comms.client_flag:
+            for client in Engine.clients:
+                gs = Engine.game_states[client]
         serverTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and not playerOne)
         for e in p.event.get():
             if e.type == p.QUIT:
