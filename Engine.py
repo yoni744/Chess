@@ -68,9 +68,12 @@ def get_whiteToMove():
     return whiteToMove
 
 def assign_board(addr):
-    gs = GameState() # Create a new instance of GameState per client
-    game_boards.update({addr: gs.board})
-    game_states.update({addr: gs})
+    game_boards.update({addr: get_current_board()}) # If it's the first client, assign the first board to it(No need to create a new one.).
+    game_states.update({addr: GameState()})
+    if len(clients) > 1:
+        gs = GameState() # Create a new instance of GameState per client
+        game_boards.update({addr: gs.board})
+        game_states.update({addr: gs})
 
 class Move():
     rankToRows = {"1": 7, "2": 6, "3": 5, "4": 4,
@@ -972,15 +975,17 @@ class Communication():
         serialized_data = json.dumps(board) # Serialize the board
         if self.client_flag: # If you're server send each client's board
             serialized_data = json.dumps(game_boards[addr[1]]) # Serialize the board
+            for client in clients:
+                print(game_boards[client])
         encrypted_key = self.encrypt.encrypt_symmetric_key() # Encrypt symmetric key
         encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
         try:
             socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
             if self.client_flag:
-                print("CLIENT FALG On")
-                print(f"Sent Data: {game_boards[addr[1]]}")
+                print("CLIENT FLAG ON:") # Debugging
+                print(f"Sent Data: {game_boards[addr[1]]}") # Debugging
             else:
-                print(f"Sent Data: {board}")
+                print(f"Sent Data: {board}") # Debugging
         except Exception as e:
             raise e
 
