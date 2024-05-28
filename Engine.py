@@ -887,6 +887,7 @@ class Communication():
                     print("Client disconnected.")
                     break
                 self.recive_flag = True
+                print(f"Received Data: {data}")
                 game_board = data
             except:
                 client_socket.close()
@@ -951,6 +952,7 @@ class Communication():
                     print("Server disconnected.")
                     break
                 self.recive_flag = True
+                print(f"Received Data: {data}")
                 set_current_board(data)
         finally:
             client_socket.close()
@@ -974,6 +976,11 @@ class Communication():
         encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
         try:
             socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
+            if self.client_flag:
+                print("CLIENT FALG On")
+                print(f"Sent Data: {game_boards[addr[1]]}")
+            else:
+                print(f"Sent Data: {board}")
         except Exception as e:
             raise e
 
