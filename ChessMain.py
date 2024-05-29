@@ -65,11 +65,13 @@ def main():
     longBlackCastle = [(0, 4), (0, 1)]
     print(playerOne, " PlayerOne")
     client_socket = Engine.get_client_socket()
-
+    server_socket = Engine.get_server_socket()
+    # //TODO: Find out why it doesn't always updates board.
     while running:
-        if comms.client_flag:
-            for client in Engine.clients:
-                gs = Engine.game_states[client]
+        if comms.recive_flag:
+            gs.whiteToMove = not gs.whiteToMove
+            validMoves = gs.GetValidMoves()
+            comms.recive_flag = False
         serverTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and not playerOne)
         for e in p.event.get():
             if e.type == p.QUIT:
@@ -169,8 +171,7 @@ def main():
                         
                         for x in range(len(validMoves)):
                             try:
-                                # print(validMoves[x].getChessNotation() + " Valid") # Debugging
-                                pass
+                                print(validMoves[x].getChessNotation() + " Valid") # Debugging
                             except:
                                 validMoves.remove(validMoves[x])
                                 x -= 1
@@ -238,16 +239,9 @@ def main():
         if gs.Draw or gs.checkMate:
             gameOver = True # Make it nicer looking
 
-        if playerOne: # Only go in if you're the server
-            for client in Engine.clients:
-                DrawGameState(screen, Engine.game_boards[client])
-                gs = Engine.game_states[client]
-                clock.tick(MAX_FPS)
-                p.display.flip()
-        else:
-            DrawGameState(screen, Engine.get_current_board())
-            clock.tick(MAX_FPS)
-            p.display.flip()
+        DrawGameState(screen, Engine.get_current_board())
+        clock.tick(MAX_FPS)
+        p.display.flip()
 
 
 if __name__ == '__main__':
