@@ -1,5 +1,7 @@
 import pygame as p
 import Engine
+import time
+import threading
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8 # board is 8x8
@@ -37,6 +39,16 @@ def SetupConnection(comms):
     print(socket)
     comms.connection_established.wait()
 
+def UpdateSpectatorWindow(screen, clock, comms):
+    while True: # //TODO: Figure out why it won't update the window.
+        if comms.recive_flag:
+            print("INSIDE THAY LOOP")
+            print(f"ENGINE.GET_CURRENT_BOARD: {Engine.get_current_board()}")
+            DrawGameState(screen, Engine.get_current_board())
+            clock.tick(MAX_FPS)
+            p.display.flip()
+            comms.recive_flag = False
+
 def main():
     comms = Engine.Communication()
     SetupConnection(comms)
@@ -65,8 +77,19 @@ def main():
     longBlackCastle = [(0, 4), (0, 1)]
     print(playerOne, " PlayerOne")
     client_socket = Engine.get_client_socket()
+    print(f"CLIENT SOCKET 0: {client_socket}")
     server_socket = Engine.get_server_socket()
-    # //TODO: Find out why it doesn't always updates board.
+    time.sleep(1) # Need to wait for Engine.get_clients() to update
+
+    if not Engine.get_clients()[client_socket]:
+        DrawGameState(screen, Engine.get_current_board()) # Drawing the board for the first time without moves.
+        clock.tick(MAX_FPS)
+        p.display.flip()
+        spectator_thread = threading.Thread(target=UpdateSpectatorWindow, args=(screen, clock, comms))
+        spectator_thread.daemon = True
+        spectator_thread.start()
+        
+
     while running:
         if comms.recive_flag:
             gs.whiteToMove = not gs.whiteToMove
@@ -224,6 +247,7 @@ def main():
                     addr = client_socket.getpeername()
                 except:
                     print("discconeted")
+                    print(f"CLIENT_SOCKET: {client_socket}")
                 comms.SendMessage(client_socket, gs.board, addr)
             
         if "O-O" in str(moveMade):

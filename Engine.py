@@ -19,6 +19,20 @@ client_socket = None
 server_socket = None
 current_board = None
 whiteToMove = True
+clients = {}
+
+def set_clients(client, true_or_false):
+    global clients
+    clients.update({client: true_or_false})
+    print(f"Updateed: {clients}")
+
+def delete_clients(client):
+    global clients
+    del clients[client]
+
+def get_clients():
+    global clients
+    return clients
 
 def set_server_state(server):
     global isServer
@@ -859,58 +873,37 @@ class Communication():
         self.connection_established = Event()  # Event to signal successful connection
         self.recive_flag = None
         self.encrypt = Encryption()
-        self.client = [] # A list of all the clients
-
-    def create_display_window(self, host, port, close_event):
-        # Initialize the window once outside the loop
-        window = tk.Tk()
-        window.title("Server Information")
-        window.geometry("300x100")
-
-        host_var = tk.StringVar(value=f"Host: {host}")
-        port_var = tk.StringVar(value=f"Port: {port}")
-        tk.Label(window, textvariable=host_var).pack()
-        tk.Label(window, textvariable=port_var).pack()
-
-        def update_gui():
-            # Handle GUI updates within a try-except inside the loop
-            try:
-                func, args = self.gui_queue.get_nowait()
-                func(*args)
-                self.gui_queue.task_done()
-            except queue.Empty:
-                pass
-            if not close_event.is_set():
-                window.after(100, update_gui)  # Continue updating if close_event is not set
-
-        def check_close_event():
-            if close_event.is_set():
-                window.destroy()  # Close the window if close_event is set
-            else:
-                window.after(100, check_close_event)  # Continue checking close_event
-
-        window.after(100, update_gui)
-        window.after(100, check_close_event)
-        window.mainloop()
-
-    def handle_clients(self, client):
-        self.client_flag = True
-        client_port = addr[1] # Only take the port
-        clients.append(client_port)  # A list of the port to use for assign_board
+        self.client_flag = False # A flag to know when the first client connected - player connected.
+        self.clients = {} # A dict of all clients connect with their socket as key and wheter they are player or spectator as value(True or False)
+    
+    def handle_client(self, addr, client_socket, server_socket):
+        if self.client_flag:
+            set_clients(client_socket, False)
+            self.clients.update({client_socket: False})
+        else:
+            self.client_flag = True
+            set_clients(client_socket, True)
+            self.clients.update({client_socket: True})
 
         while True:
             try:
-                data = self.encrypt.receive_data(client_socket)
-                if not data:
-                    print("Client disconnected.")
-                    break
-                self.recive_flag = True
-                print(f"Received Data: {data}")
-                game_board = data
+                if self.clients[client_socket]: # Only if he is a player receive data from him
+                    try:
+                        data = self.encrypt.receive_data(client_socket)
+                        self.recive_flag = True
+                        print(f"\nReceived board: {data}")
+                        set_current_board(data)
+                        if len(self.clients) > 1:
+                            for client in self.clients:
+                                if not self.clients[client]:
+                                    client.send(json.dumps(data).encode())
+                    except:
+                        raise
+                        client_socket.close()
+                        server_socket.close()
             except:
-                client_socket.close()
-                server_socket.close()
-                break
+                del self.clients[client]
+                delete_clients(client)
 
         client_socket.close()
         server_socket.close()
@@ -930,8 +923,7 @@ class Communication():
             except OSError:
                 print(f"Failed to bind to {host_ip}:{port}, trying a new port...")
                 port = random.randint(1000, 9999)
-
-        close_event = Event()
+        
         server_socket.listen(5)
         print(f"Server listening on {host_ip}:{port}")
 
@@ -940,18 +932,23 @@ class Communication():
                 client_socket, addr = server_socket.accept()
                 set_client_socket(client_socket)
                 print(f"Received connection from {addr}")
+                if not self.client_flag:
+                    client_socket.send(b"True")
+                else:
+                    client_socket.send(b"False")
                 self.connection_established.set()
-                self.encrypt.receive_public_key(client_socket)
-                self.encrypt.send_public_key(client_socket)
-                client_thread = Thread(target=self.handle_clients, args=(addr, client_socket, server_socket))
+                if self.client_flag == False:
+                    self.encrypt.receive_public_key(client_socket)
+                    self.encrypt.send_public_key(client_socket)
+                client_thread = Thread(target=self.handle_client, args=(addr, client_socket, server_socket))
                 client_thread.start()
             except socket.error as e:
+                print("IN EXCEPT")
                 if e.args[0] == socket.errno.EAGAIN or e.args[0] == socket.errno.EWOULDBLOCK:
                     print("No connections are available to be accepted")
                     print("Error: ", e)
                 else:
                     raise
-            close_event.set()
 
     def start_client(self, host, port):
         set_server_state(False)
@@ -959,22 +956,50 @@ class Communication():
         client_socket.connect((host, port))
         set_client_socket(client_socket)
         print("Connected to server at {}:{}".format(host, port))
+        message = client_socket.recv(1024)
+        if message == b"True":
+            set_clients(client_socket, True)
+            self.clients.update({client_socket: True})
+            print(message)
+        else:
+            set_clients(client_socket, False)
+            self.clients.update({client_socket: False})
         self.connection_established.set()
-        self.encrypt.send_public_key(client_socket)
-        self.encrypt.receive_public_key(client_socket)
+        if self.clients[client_socket]:
+            self.encrypt.send_public_key(client_socket)
+            self.encrypt.receive_public_key(client_socket)
 
-        try:
+        if self.clients[client_socket]:
             while True:
-                data = self.encrypt.receive_data(client_socket)
-                if not data:
-                    print("Server disconnected.")
-                    break
-                self.recive_flag = True
-                print(f"\nReceived board: {data}")
-                set_current_board(data)
-        finally:
-            client_socket.close()
-        return client_socket
+                try:
+                    data = self.encrypt.receive_data(client_socket)
+                    if not data:
+                        print("Server disconnected.")
+                        break
+                    self.recive_flag = True
+                    print(f"\nReceived board: {data}")
+                    set_current_board(data)
+                except Exception as e:
+                    raise e
+                    client_socket.close()
+        else:
+            print("IN ELSE HERE CMD")
+            while True:
+                try:
+                    print("IN LOOP")
+                    data = client_socket.recv(2048).decode()
+                    print("GOT MESSAGE")
+                    if data:
+                        print("Yes data")
+                        data = json.loads(data)
+                        set_current_board(data)
+                        self.recive_flag = True
+                    else:
+                        print("Not data")
+                        time.sleep(5)
+                except:
+                    raise
+                    client_socket.close()
 
     def get_host_ip(self):
         try:
@@ -985,15 +1010,26 @@ class Communication():
             IP = '127.0.0.1'
         return IP
     
-    def SendMessage(self, socket, board, addr):
-        self.encrypt.generate_symmetric_key() # Generate symmetric key
-        serialized_data = json.dumps(board) # Serialize the board
-        encrypted_key = self.encrypt.encrypt_symmetric_key() # Encrypt symmetric key
-        encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
-        try:
-            socket.sendall(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
-        except Exception as e:
-            raise e
+    def SendMessage(self, client_socket, board, addr):
+        for client in self.clients:
+            if self.clients[client]:
+                self.encrypt.generate_symmetric_key() # Generate symmetric key
+                serialized_data = json.dumps(board) # Serialize the board
+                encrypted_key = self.encrypt.encrypt_symmetric_key() # Encrypt symmetric key
+                encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
+                try:
+                    client.send(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
+                    print(f"Sent data: {board}")
+                except Exception as e:
+                    print(f"ClIENT_SOCKET2: {client}")
+                    raise e
+            else:
+                try:
+                    print("SENDING TO SECOND CLIENT")
+                    client.send(json.dumps(board).encode())
+                except:
+                    del self.clients[client]
+                    delete_clients(client)
 
     def setup_network_mode(self):
         root = tk.Tk()
