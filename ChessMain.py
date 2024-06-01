@@ -54,6 +54,7 @@ def main():
     SetupConnection(comms)
     addr = None # Socket addres
     p.init()
+    p.display.set_caption("Chess Game")
     screen = p.display.set_mode((WIDTH, HEIGHT))
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
