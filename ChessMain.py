@@ -40,10 +40,8 @@ def SetupConnection(comms):
     comms.connection_established.wait()
 
 def UpdateSpectatorWindow(screen, clock, comms):
-    while True: # //TODO: Figure out why it won't update the window.
+    while True:
         if comms.recive_flag:
-            print("INSIDE THAY LOOP")
-            print(f"ENGINE.GET_CURRENT_BOARD: {Engine.get_current_board()}")
             DrawGameState(screen, Engine.get_current_board())
             clock.tick(MAX_FPS)
             p.display.flip()
@@ -233,7 +231,7 @@ def main():
                 except:
                     print("discconeted")
                     print(addr, " ADDRESS")
-                comms.SendMessage(client_socket, gs.board, addr)
+                comms.SendMessage(client_socket, gs.board)
                 
             else:
                 validMoves = gs.GetValidMoves()
@@ -249,17 +247,17 @@ def main():
                 except:
                     print("discconeted")
                     print(f"CLIENT_SOCKET: {client_socket}")
-                comms.SendMessage(client_socket, gs.board, addr)
+                comms.SendMessage(client_socket, gs.board)
             
         if "O-O" in str(moveMade):
             validMoves = gs.GetValidMoves()
             moveMade = False
-            comms.SendMessage(client_socket, gs.board, addr)
+            comms.SendMessage(client_socket, gs.board)
 
         if gs.promotionFlag == True: # Make sure promotion moves count as check.
             validMoves = gs.PromotionCheck()
             moveMade = False
-            comms.SendMessage(client_socket, gs.board, addr)
+            comms.SendMessage(client_socket, gs.board)
         
         if gs.Draw or gs.checkMate:
             gameOver = True # Make it nicer looking

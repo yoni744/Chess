@@ -89,13 +89,6 @@ class Move():
         self.endCol = endSq[1]
         self.pieceMoved = board[self.startRow][self.startCol]
         self.pieceCaptured = board[self.endRow][self.endCol]
-        self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol #Creating a uniqe move ID for every move 1,1 to 1,2 = 1112
-
-        # Overriding the equals method
-        def __eq__(self, other):
-            if isinstance(other, Move):
-                return self.moveID == other.moveID
-            return False
                 
     def getChessNotation(self):
         return self.GetRankFile(self.startRow, self.startCol) + self.GetRankFile(self.endRow, self.endCol)
@@ -876,7 +869,7 @@ class Communication():
         self.client_flag = False # A flag to know when the first client connected - player connected.
         self.clients = {} # A dict of all clients connect with their socket as key and wheter they are player or spectator as value(True or False)
     
-    def handle_client(self, addr, client_socket, server_socket):
+    def handle_client(self, client_socket, server_socket):
         if self.client_flag:
             set_clients(client_socket, False)
             self.clients.update({client_socket: False})
@@ -940,7 +933,7 @@ class Communication():
                 if self.client_flag == False:
                     self.encrypt.receive_public_key(client_socket)
                     self.encrypt.send_public_key(client_socket)
-                client_thread = Thread(target=self.handle_client, args=(addr, client_socket, server_socket))
+                client_thread = Thread(target=self.handle_client, args=(client_socket, server_socket))
                 client_thread.start()
             except socket.error as e:
                 print("IN EXCEPT")
@@ -983,20 +976,15 @@ class Communication():
                     raise e
                     client_socket.close()
         else:
-            print("IN ELSE HERE CMD")
             while True:
                 try:
-                    print("IN LOOP")
                     data = client_socket.recv(2048).decode()
-                    print("GOT MESSAGE")
                     if data:
-                        print("Yes data")
                         data = json.loads(data)
                         set_current_board(data)
                         self.recive_flag = True
                     else:
-                        print("Not data")
-                        time.sleep(5)
+                        time.sleep(5) # Wait for 5 seconds then look again.
                 except:
                     raise
                     client_socket.close()
@@ -1010,7 +998,7 @@ class Communication():
             IP = '127.0.0.1'
         return IP
     
-    def SendMessage(self, client_socket, board, addr):
+    def SendMessage(self, client_socket, board):
         for client in self.clients:
             if self.clients[client]:
                 self.encrypt.generate_symmetric_key() # Generate symmetric key
@@ -1019,13 +1007,10 @@ class Communication():
                 encrypted_data = self.encrypt.encrypt_data(serialized_data) # Encrypt serialized board
                 try:
                     client.send(f"{encrypted_key}::{encrypted_data}".encode('utf-8')) # Send key + board
-                    print(f"Sent data: {board}")
                 except Exception as e:
-                    print(f"ClIENT_SOCKET2: {client}")
                     raise e
             else:
                 try:
-                    print("SENDING TO SECOND CLIENT")
                     client.send(json.dumps(board).encode())
                 except:
                     del self.clients[client]
