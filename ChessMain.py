@@ -261,6 +261,13 @@ def main():
         
         if gs.Draw or gs.checkMate:
             gameOver = True # Make it nicer looking
+            f = open("result.txt", "a")
+            if gs.Draw:
+                f.write("Tie, ")
+            else:
+                f.write(f"{winner}, ")
+            break
+
 
         DrawGameState(screen, Engine.get_current_board())
         clock.tick(MAX_FPS)
